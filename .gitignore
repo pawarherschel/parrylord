@@ -1,0 +1,15 @@
+# Rust builds
+/target
+# This file contains environment-specific configuration like linker settings
+.cargo/config.toml
+/assets/images/ducky.png
+/assets/audio/sound_effects/step2.ogg
+/assets/audio/sound_effects/button_hover.ogg
+/assets/audio/sound_effects/step4.ogg
+/assets/images/splash.png
+/assets/audio/sound_effects/button_click.ogg
+/assets/audio/music/Fluffing A Duck.ogg
+/assets/audio/music/Monkeys Spinning Monkeys.ogg
+/assets/audio/sound_effects/step1.ogg
+/assets/audio/sound_effects/step3.ogg
+asset-all
