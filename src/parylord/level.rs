@@ -39,7 +39,7 @@ pub fn spawn_level(
         Visibility::default(),
         StateScoped(Screen::Gameplay),
         children![
-            player(600.0, &player_assets),
+            player(&player_assets),
             (
                 Sprite {
                     image: level_assets.bg.clone(),
