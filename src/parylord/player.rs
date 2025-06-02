@@ -4,11 +4,9 @@ use crate::parylord::dynamic_character_2d::CharacterControllerBundle;
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
-use avian2d::math::Vector;
-use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, ScalableCollider, Sensor};
+use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use log::{log, Level};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
@@ -82,7 +80,7 @@ impl Player {
     }
 }
 
-fn hurt(mut query: Query<&CollidingEntities, With<PlayerHurtBox>>) {
+fn hurt(query: Query<&CollidingEntities, With<PlayerHurtBox>>) {
     for q in query {
         if !q.is_empty() {
             // log!(Level::Info, "{q:?}");

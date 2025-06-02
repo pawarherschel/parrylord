@@ -4,11 +4,8 @@ use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::PausableSystems;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, RigidBody, Sensor};
-use bevy::ecs::spawn::SpawnableList;
 use bevy::prelude::*;
-use log::{log, Level};
 use rand::{thread_rng, Rng};
-use std::thread::spawn;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<EnemyAssets>();

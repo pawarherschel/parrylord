@@ -1,8 +1,5 @@
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
-use bevy::ecs::component::HookContext;
-use bevy::ecs::system::entity_command::{insert, remove};
-use bevy::ecs::world::DeferredWorld;
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -57,7 +54,7 @@ pub fn handle_health(In(entities): In<Vec<Entity>>, mut commands: Commands) {
     }
 }
 
-pub fn tick_invincibility_timer(mut timers: Query<(&mut InvincibilityTimer)>, time: Res<Time>) {
+pub fn tick_invincibility_timer(mut timers: Query<&mut InvincibilityTimer>, time: Res<Time>) {
     for mut timer in &mut timers {
         timer.0.tick(time.delta());
     }
