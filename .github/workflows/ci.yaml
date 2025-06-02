@@ -30,7 +30,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain.toml@stable
         with:
-          toolchain: ${{ env.toolchain }}
+          toolchain: nightly
           components: rustfmt
 
       - name: Check formatting
@@ -48,7 +48,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain.toml@master
         with:
-          toolchain: ${{ env.toolchain }}
+          toolchain: nightly
 
       - name: Restore Rust cache
         id: cache
@@ -76,7 +76,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain.toml@master
         with:
-          toolchain: ${{ env.toolchain }}
+          toolchain: nightly
           components: clippy
 
       - name: Restore Rust cache
@@ -134,7 +134,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain.toml@master
         with:
-          toolchain: ${{ env.toolchain }}
+          toolchain: nightly
           components: rustc-codegen-cranelift-preview
 
       - name: Restore Rust cache
@@ -162,7 +162,7 @@ jobs:
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain.toml@master
         with:
-          toolchain: ${{ env.toolchain }}
+          toolchain: nightly
           targets: wasm32-unknown-unknown
 
       - name: Restore Rust cache
