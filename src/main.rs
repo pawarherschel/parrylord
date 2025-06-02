@@ -12,6 +12,7 @@ mod menus;
 mod parylord;
 mod screens;
 mod theme;
+mod zaphkiel;
 
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};

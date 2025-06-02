@@ -1,11 +1,11 @@
 use crate::asset_tracking::LoadResource;
+use crate::exponential_decay;
 use crate::parylord::movement::{MovementController, ScreenWrap};
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
-use bevy::prelude::ops::asin;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bevy::window::WindowResolution;
+
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
     app.register_type::<AttackIndicator>();
@@ -102,16 +102,15 @@ fn record_player_directional_input(
 }
 
 fn aim(
-    window: Query<&Window>,
+    window: Single<&Window>,
     mut attack_indicator: Query<
         (&mut Transform, &GlobalTransform),
         (With<AttackIndicator>, Without<Player>),
     >,
     camera: Single<(&Camera, &GlobalTransform)>,
+    time: Res<Time>,
 ) -> Result {
-    let Ok(window) = window.single() else {
-        return Ok(());
-    };
+    let window = *window;
 
     let Some(mouse) = window.cursor_position() else {
         return Ok(());
@@ -125,54 +124,41 @@ fn aim(
     };
     let pos = pos.origin.truncate();
 
-    let vec_to_mouse = (gt.translation() - pos.extend(gt.translation().z)).normalize_or_zero();
-    let alpha = asin(vec_to_mouse.y);
-    let alpha = if pos.x < gt.translation().x {
-        alpha
-    } else {
-        -alpha
-    };
+    let vec_to_mouse = (pos.extend(gt.translation().z) - gt.translation()).normalize_or_zero();
+    let alpha = vec_to_mouse.y.atan2(vec_to_mouse.x);
 
-    attack_indicator.rotation = Quat::from_axis_angle(attack_indicator.local_z().as_vec3(), alpha);
+    let mut curr_quat = attack_indicator.rotation;
+    let mut target_quat = Quat::from_rotation_z(alpha);
 
-    if pos.x < gt.translation().x {
-        attack_indicator.scale.x = -1.0;
-        attack_indicator.scale.y = -1.0;
-        attack_indicator.scale.z = -1.0;
-    } else {
-        attack_indicator.scale.x = 1.0;
-        attack_indicator.scale.y = 1.0;
-        attack_indicator.scale.z = 1.0;
+    let dot = curr_quat.dot(target_quat);
+    if dot < 0.0 {
+        curr_quat = -curr_quat;
+        target_quat = -target_quat;
     }
 
+    // https://docs.rs/glam/0.29.3/src/glam/f32/sse2/quat.rs.html#665
+    // Note that a rotation can be represented by two quaternions: `q` and
+    // `-q`. The slerp path between `q` and `end` will be different from the
+    // path between `-q` and `end`. One path will take the long way around and
+    // one will take the short way. In order to correct for this, the `dot`
+    // product between `self` and `end` should be positive. If the `dot`
+    // product is negative, slerp between `self` and `-end`.
+    // let mut dot = self.dot(end);
+    // if dot < 0.0 {
+    //     end = -end;
+    //     dot = -dot;
+    // }
+
+    let interpolated_quat = exponential_decay!(
+        current: curr_quat,
+        target: target_quat,
+        delta: time.delta_secs(),
+    )
+    .normalize();
+
+    attack_indicator.rotation = interpolated_quat;
+
     Ok(())
-}
-
-fn exponential_decay(a: Vec3, b: Vec3, decay: f32, delta: f32) -> Vec3 {
-    b + (a - b) * f32::exp(-decay * delta)
-}
-
-fn window_to_game(coord: Vec3, window_resolution: WindowResolution) -> Vec3 {
-    let x = window_resolution.width();
-    let y = window_resolution.height();
-
-    let xy = Vec2::new(x, y);
-
-    let half_xy = xy / 2.0;
-
-    let half_xy = half_xy.extend(coord.z);
-    //
-    // if debug {
-    //     log!(Level::Info, "half_xy: {half_xy:?}");
-    // }
-
-    let a = coord - half_xy;
-
-    // if debug {
-    //     log!(Level::Info, "coord - half_xy: {:?}", coord - half_xy);
-    // }
-
-    Vec3::new(a.x, a.y, a.z)
 }
 
 #[derive(Resource, Asset, Clone, Reflect)]

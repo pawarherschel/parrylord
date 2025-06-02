@@ -1,7 +1,6 @@
 use crate::asset_tracking::LoadResource;
 use crate::parylord::player::{player, PlayerAssets};
 use crate::screens::Screen;
-use bevy::image::{ImageLoaderSettings, ImageSampler};
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
