@@ -6,3 +6,8 @@ url = "https://kenney.nl/assets/platformer-pack-redux"
 
 ["assets/images/enemy"]
 url = "https://kenney.nl/assets/alien-ufo-pack"
+
+["assets/audio/sound_effects/button_click.ogg"]
+url = "https://github.com/TheBevyFlock/bevy_new_2d/blob/b44e11bd3fe493070f757b4b852f5a0def0c74f3/assets/audio/sound_effects/button_click.ogg"
+["assets/audio/sound_effects/button_hover.ogg"]
+url = "https://github.com/TheBevyFlock/bevy_new_2d/blob/b44e11bd3fe493070f757b4b852f5a0def0c74f3/assets/audio/sound_effects/button_hover.ogg"
