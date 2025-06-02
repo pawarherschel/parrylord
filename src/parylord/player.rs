@@ -1,8 +1,10 @@
 use crate::asset_tracking::LoadResource;
 use crate::exponential_decay;
-use crate::parylord::movement::{MovementController, ScreenWrap};
+use crate::parylord::dynamic_character_2d::CharacterControllerBundle;
+use crate::parylord::movement::MovementController;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
+use avian2d::prelude::Collider;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 
@@ -25,7 +27,7 @@ pub(super) fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-struct Player;
+pub struct Player;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
@@ -33,7 +35,6 @@ struct AttackIndicator;
 
 /// The player character.
 pub fn player(
-    max_speed: f32,
     player_assets: &PlayerAssets,
     // texture_atlas_layouts: &mut Assets<TextureAtlasLayout>,
 ) -> impl Bundle {
@@ -46,6 +47,7 @@ pub fn player(
     (
         Name::new("Player"),
         Player,
+        CharacterControllerBundle::new(Collider::capsule(48.0, 48.0)),
         Sprite {
             image: player_assets.pink.clone(),
             // texture_atlas: Some(TextureAtlas {
@@ -65,11 +67,11 @@ pub fn player(
             AttackIndicator,
         )],
         Transform::from_scale(Vec2::splat(0.5).extend(1.0)),
-        MovementController {
-            max_speed,
-            ..default()
-        },
-        ScreenWrap,
+        // MovementController {
+        //     max_speed,
+        //     ..default()
+        // },
+        // ScreenWrap,
     )
 }
 fn record_player_directional_input(

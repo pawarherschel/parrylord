@@ -1,8 +1,26 @@
+use avian2d::prelude::PhysicsLayer;
 use bevy::prelude::*;
-mod player;
-mod movement;
-pub(crate) mod level;
+mod dynamic_character_2d;
+pub mod level;
+pub mod movement;
+pub mod player;
 
-pub(super) fn plugin(app: &mut App) {
-    app.add_plugins((player::plugin, movement::plugin, level::plugin));
+pub fn plugin(app: &mut App) {
+    app.add_plugins((
+        player::plugin,
+        movement::plugin,
+        level::plugin,
+        dynamic_character_2d::CharacterControllerPlugin,
+    ));
+}
+
+#[derive(PhysicsLayer, Default)]
+pub enum CollisionLayer {
+    #[default]
+    None,
+    Walls,
+    Player,
+    PlayerProjectile,
+    Enemy,
+    EnemyProjectile,
 }

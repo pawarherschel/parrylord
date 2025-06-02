@@ -1,10 +1,13 @@
 use crate::asset_tracking::LoadResource;
 use crate::parylord::player::{player, PlayerAssets};
+use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
+use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
+    app.register_type::<Walls>();
     app.load_resource::<LevelAssets>();
 }
 
@@ -42,8 +45,50 @@ pub fn spawn_level(
                     image: level_assets.bg.clone(),
                     ..default()
                 },
-                Transform::from_xyz(0.0, 0.0, -1000.0)
+                Transform::from_xyz(0.0, 0.0, -1000.0),
+                walls(),
             )
         ],
     ));
 }
+
+pub fn walls() -> impl Bundle {
+    (
+        Name::new("Walls"),
+        Walls,
+        children![
+            (
+                Name::new("Left Wall"),
+                Transform::from_xyz(-(1920.0 / 2.0 - 96.0 / 2.0), 0.0, 0.0),
+                RigidBody::Static,
+                Collider::rectangle(96.0, 1080.0),
+                CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+            ),
+            (
+                Name::new("Right Wall"),
+                Transform::from_xyz(1920.0 / 2.0 - 96.0 / 2.0, 0.0, 0.0),
+                RigidBody::Static,
+                Collider::rectangle(96.0, 1080.0),
+                CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+            ),
+            (
+                Name::new("Top Wall"),
+                Transform::from_xyz(0.0, 1080.0 / 2.0 - 96.0 / 2.0, 0.0),
+                RigidBody::Static,
+                Collider::rectangle(1920.0, 96.0),
+                CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+            ),
+            (
+                Name::new("Top Wall"),
+                Transform::from_xyz(0.0, -(1080.0 / 2.0 - 96.0 / 2.0), 0.0),
+                RigidBody::Static,
+                Collider::rectangle(1920.0, 96.0),
+                CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+            )
+        ],
+    )
+}
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[reflect(Component)]
+pub struct Walls;

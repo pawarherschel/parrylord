@@ -14,10 +14,10 @@ mod screens;
 mod theme;
 mod zaphkiel;
 
+use avian2d::prelude::Gravity;
+use avian2d::PhysicsPlugins;
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};
-use bevy_egui::EguiPlugin;
-use bevy_inspector_egui::quick::WorldInspectorPlugin;
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -62,10 +62,8 @@ impl Plugin for AppPlugin {
             theme::plugin,
         ));
 
-        app.add_plugins(EguiPlugin {
-            enable_multipass_for_primary_context: true,
-        })
-        .add_plugins(WorldInspectorPlugin::default());
+        app.add_plugins(PhysicsPlugins::default())
+            .insert_resource(Gravity::ZERO);
 
         // Order new `AppSystems` variants by adding them here:
         app.configure_sets(
