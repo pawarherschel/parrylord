@@ -12,3 +12,6 @@ url = "https://github.com/TheBevyFlock/bevy_new_2d/blob/b44e11bd3fe493070f757b4b
 
 ["assets/audio/sound_effects/button_hover.ogg"]
 url = "https://github.com/TheBevyFlock/bevy_new_2d/blob/b44e11bd3fe493070f757b4b852f5a0def0c74f3/assets/audio/sound_effects/button_hover.ogg"
+
+["assets/images/enemy_attack"]
+url = "https://kenney.nl/assets/particle-pack"

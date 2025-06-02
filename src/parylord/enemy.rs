@@ -1,6 +1,6 @@
 use crate::asset_tracking::LoadResource;
 use crate::parylord::health::{Health, InvincibilityTimer, ZeroHealth};
-use crate::parylord::CollisionLayer;
+use crate::parylord::{CollisionLayer, EnemyAssets};
 use crate::screens::Screen;
 use crate::PausableSystems;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, RigidBody, Sensor};
@@ -9,9 +9,6 @@ use rand::{thread_rng, Rng};
 
 pub fn plugin(app: &mut App) {
     app.register_type::<EnemyAssets>();
-
-    app.register_type::<EnemyAssets>();
-    app.load_resource::<EnemyAssets>();
 
     app.add_systems(
         Update,
@@ -89,35 +86,5 @@ pub fn handle_dead_enemies(
 ) {
     for entity in dead_enemies {
         commands.entity(entity).despawn();
-    }
-}
-
-#[derive(Resource, Asset, Clone, Reflect)]
-#[reflect(Resource)]
-pub struct EnemyAssets {
-    #[dependency]
-    beige: Handle<Image>,
-    #[dependency]
-    blue: Handle<Image>,
-    #[dependency]
-    green: Handle<Image>,
-    #[dependency]
-    yellow: Handle<Image>,
-}
-
-impl EnemyAssets {
-    const MAX_ASSETS: u8 = 4;
-}
-
-impl FromWorld for EnemyAssets {
-    fn from_world(world: &mut World) -> Self {
-        let assets = world.resource::<AssetServer>();
-
-        Self {
-            beige: assets.load("images/enemy/beige.png"),
-            blue: assets.load("images/enemy/blue.png"),
-            green: assets.load("images/enemy/green.png"),
-            yellow: assets.load("images/enemy/yellow.png"),
-        }
     }
 }
