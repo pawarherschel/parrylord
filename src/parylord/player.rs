@@ -1,11 +1,14 @@
 use crate::asset_tracking::LoadResource;
 use crate::exponential_decay;
 use crate::parylord::dynamic_character_2d::CharacterControllerBundle;
+use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
-use avian2d::prelude::Collider;
+use avian2d::math::Vector;
+use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, ScalableCollider, Sensor};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use log::{log, Level};
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Player>();
@@ -17,7 +20,7 @@ pub(super) fn plugin(app: &mut App) {
     // Record directional input as movement controls.
     app.add_systems(
         Update,
-        (aim)
+        (aim, hurt)
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems),
@@ -30,49 +33,66 @@ pub struct Player;
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-struct AttackIndicator;
+pub struct PlayerHurtBox;
+impl Player {
+    pub fn spawn(player_assets: &PlayerAssets) -> impl Bundle {
+        // A texture atlas is a way to split a single image into a grid of related images.
+        // You can learn more in this example: https://github.com/bevyengine/bevy/blob/latest/examples/2d/texture_atlas.rs
+        // let layout = TextureAtlasLayout::from_grid(UVec2::splat(32), 6, 2, Some(UVec2::splat(1)), None);
+        // let texture_atlas_layout = texture_atlas_layouts.add(layout);
+        // let player_animation = PlayerAnimation::new();
 
-/// The player character.
-pub fn player(
-    player_assets: &PlayerAssets,
-    // texture_atlas_layouts: &mut Assets<TextureAtlasLayout>,
-) -> impl Bundle {
-    // A texture atlas is a way to split a single image into a grid of related images.
-    // You can learn more in this example: https://github.com/bevyengine/bevy/blob/latest/examples/2d/texture_atlas.rs
-    // let layout = TextureAtlasLayout::from_grid(UVec2::splat(32), 6, 2, Some(UVec2::splat(1)), None);
-    // let texture_atlas_layout = texture_atlas_layouts.add(layout);
-    // let player_animation = PlayerAnimation::new();
-
-    (
-        Name::new("Player"),
-        Player,
-        CharacterControllerBundle::new(Collider::capsule(48.0, 48.0)),
-        Sprite {
-            image: player_assets.pink.clone(),
-            // texture_atlas: Some(TextureAtlas {
-            //     layout: texture_atlas_layout,
-            //     index: player_animation.get_atlas_index(),
-            // }),
-            anchor: Anchor::Center,
-            ..default()
-        },
-        children![(
-            Name::new("PlayerAttackIndicator"),
+        (
+            Name::new("Player"),
+            Self,
+            CharacterControllerBundle::new(Collider::capsule(48.0, 48.0)),
             Sprite {
-                image: player_assets.attack_indicator.clone(),
-                anchor: Anchor::CenterLeft,
+                image: player_assets.pink.clone(),
+                // texture_atlas: Some(TextureAtlas {
+                //     layout: texture_atlas_layout,
+                //     index: player_animation.get_atlas_index(),
+                // }),
+                anchor: Anchor::Center,
                 ..default()
             },
-            AttackIndicator,
-        )],
-        Transform::from_scale(Vec2::splat(0.5).extend(1.0)),
-        // MovementController {
-        //     max_speed,
-        //     ..default()
-        // },
-        // ScreenWrap,
-    )
+            children![
+                (
+                    Name::new("PlayerAttackIndicator"),
+                    Sprite {
+                        image: player_assets.attack_indicator.clone(),
+                        anchor: Anchor::CenterLeft,
+                        ..default()
+                    },
+                    AttackIndicator,
+                ),
+                (
+                    Name::new("CollisionLayer::PlayerHurt"),
+                    PlayerHurtBox,
+                    Collider::capsule(32.0, 32.0),
+                    Sensor,
+                    CollisionLayers::new(
+                        [CollisionLayer::PlayerHurt],
+                        [CollisionLayer::Enemy, CollisionLayer::EnemyProjectile]
+                    ),
+                    CollidingEntities::default(),
+                ),
+            ],
+            Transform::from_scale(Vec2::splat(0.5).extend(1.0)),
+        )
+    }
 }
+
+fn hurt(mut query: Query<&CollidingEntities, With<PlayerHurtBox>>) {
+    for q in query {
+        if !q.is_empty() {
+            // log!(Level::Info, "{q:?}");
+        }
+    }
+}
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[reflect(Component)]
+struct AttackIndicator;
 
 fn aim(
     window: Single<&Window>,

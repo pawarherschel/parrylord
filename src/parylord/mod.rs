@@ -1,6 +1,8 @@
 use avian2d::prelude::PhysicsLayer;
 use bevy::prelude::*;
 mod dynamic_character_2d;
+pub mod enemy;
+mod health;
 pub mod level;
 pub mod player;
 
@@ -9,6 +11,8 @@ pub fn plugin(app: &mut App) {
         player::plugin,
         level::plugin,
         dynamic_character_2d::CharacterControllerPlugin,
+        enemy::plugin,
+        health::plugin,
     ));
 }
 
@@ -18,6 +22,7 @@ pub enum CollisionLayer {
     None,
     Walls,
     Player,
+    PlayerHurt,
     PlayerProjectile,
     Enemy,
     EnemyProjectile,

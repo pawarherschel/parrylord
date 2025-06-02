@@ -1,5 +1,6 @@
 use crate::asset_tracking::LoadResource;
-use crate::parylord::player::{player, PlayerAssets};
+use crate::parylord::enemy::{Enemy, EnemyAssets};
+use crate::parylord::player::{Player, PlayerAssets};
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
@@ -32,6 +33,7 @@ pub fn spawn_level(
     mut commands: Commands,
     level_assets: Res<LevelAssets>,
     player_assets: Res<PlayerAssets>,
+    enemy_assets: Res<EnemyAssets>,
 ) {
     commands.spawn((
         Name::new("Level"),
@@ -39,7 +41,7 @@ pub fn spawn_level(
         Visibility::default(),
         StateScoped(Screen::Gameplay),
         children![
-            player(&player_assets),
+            Player::spawn(&player_assets),
             (
                 Sprite {
                     image: level_assets.bg.clone(),
@@ -47,7 +49,8 @@ pub fn spawn_level(
                 },
                 Transform::from_xyz(0.0, 0.0, -1000.0),
                 walls(),
-            )
+            ),
+            Enemy::spawn(&enemy_assets, Vec2::new(150.0, 150.0)),
         ],
     ));
 }
