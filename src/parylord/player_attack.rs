@@ -1,6 +1,7 @@
+use crate::parylord::assets::PlayerAssets;
 use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::player::Player;
-use crate::parylord::{CollisionLayer, PlayerAssets};
+use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{exponential_decay, AppSystems, PausableSystems};
 use avian2d::parry::na::SimdBool;
@@ -17,7 +18,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (aim, handle_parry_attempt)
+        (aim, get_parry_attempt.pipe(handle_parries))
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems),
@@ -117,16 +118,30 @@ fn aim(
 #[reflect(Component)]
 pub struct PlayerAttack;
 
-pub fn handle_parry_attempt(
+pub fn get_parry_attempt(
     query: Single<&CollidingEntities, (With<PlayerAttackIndicator>, Without<Player>)>,
     all_player_projectiles: Query<Entity, With<PlayerAttack>>,
-    mut commands: Commands,
-) {
-    for entity in query.iter().copied() {
-        if all_player_projectiles.contains(entity) {
-            continue;
-        }
+    mouse_input: Res<ButtonInput<MouseButton>>,
+) -> Option<Vec<Entity>> {
+    if !mouse_input.just_pressed(MouseButton::Left) {
+        return None;
+    }
 
+    Some(
+        query
+            .iter()
+            .copied()
+            .filter(|e| !all_player_projectiles.contains(*e))
+            .collect(),
+    )
+}
+
+pub fn handle_parries(In(entities): In<Option<Vec<Entity>>>, mut commands: Commands) {
+    let Some(entities) = entities else {
+        return;
+    };
+
+    for entity in entities {
         commands.entity(entity).remove::<EnemyAttack>();
         commands.entity(entity).insert(PlayerAttack);
 

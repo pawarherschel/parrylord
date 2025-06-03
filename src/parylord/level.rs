@@ -1,11 +1,12 @@
 use crate::asset_tracking::LoadResource;
+use crate::parylord::assets::{EnemyAssets, LevelAssets, PlayerAssets};
 use crate::parylord::enemy::Enemy;
 use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::player::Player;
+use crate::parylord::CollisionLayer;
 use crate::parylord::CollisionLayer::EnemyProjectile;
-use crate::parylord::{CollisionLayer, EnemyAssets, LevelAssets, PlayerAssets};
 use crate::screens::Screen;
-use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
+use avian2d::prelude::{Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
 use std::thread::spawn;
 
@@ -31,7 +32,12 @@ pub fn spawn_level(
             (Player::spawn(&player_assets)),
             (LevelBackground::spawn(&level_assets)),
             (Enemy::spawn(&enemy_assets, Vec2::new(150.0, 150.0))),
-            (EnemyAttack::spawn(&enemy_assets, Vec2::new(150.0, -150.0))),
+            (EnemyAttack::spawn(
+                &enemy_assets,
+                Vec2::new(150.0, -150.0),
+                LinearVelocity::ZERO,
+                // TTL::new(1000.0)
+            )),
         ],
     ));
 }

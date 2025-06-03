@@ -1,6 +1,7 @@
 use crate::asset_tracking::LoadResource;
-use crate::parylord::health::{Health, InvincibilityTimer, ZeroHealth};
-use crate::parylord::{CollisionLayer, EnemyAssets};
+use crate::parylord::assets::EnemyAssets;
+use crate::parylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
+use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::PausableSystems;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, RigidBody, Sensor};
@@ -29,6 +30,7 @@ impl Enemy {
         (
             Self,
             Health(15),
+            DisplayHealth::spawn(),
             Transform::from_translation(position.extend(1.0)),
             Sprite {
                 image: match pick % EnemyAssets::MAX_ASSETS {

@@ -1,9 +1,10 @@
 use crate::asset_tracking::LoadResource;
 use crate::exponential_decay;
+use crate::parylord::assets::PlayerAssets;
 use crate::parylord::dynamic_character_2d::CharacterControllerBundle;
-use crate::parylord::health::{Health, InvincibilityTimer, ZeroHealth};
+use crate::parylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
 use crate::parylord::player_attack::PlayerAttackIndicator;
-use crate::parylord::{CollisionLayer, PlayerAssets};
+use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, Sensor};
@@ -42,10 +43,12 @@ impl Player {
         (
             Name::new("Player"),
             Health(20),
+            DisplayHealth::spawn(),
             Self,
             CharacterControllerBundle::new(Collider::capsule(48.0, 48.0)),
             Sprite {
                 image: player_assets.pink.clone(),
+                // color: Color::srgb(3.0, 3.0, 3.0),
                 // texture_atlas: Some(TextureAtlas {
                 //     layout: texture_atlas_layout,
                 //     index: player_animation.get_atlas_index(),

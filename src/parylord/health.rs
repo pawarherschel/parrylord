@@ -1,24 +1,29 @@
 use crate::screens::Screen;
-use crate::{AppSystems, PausableSystems};
+use crate::theme::widget;
+use crate::{exponential_decay, AppSystems, PausableSystems};
+use bevy::log::tracing_subscriber::fmt::time;
 use bevy::prelude::*;
+use bevy::render::render_resource::{AsBindGroup, AsBindGroupShaderType, ShaderRef};
+use bevy::sprite::Material2d;
+use bevy::text::cosmic_text::ttf_parser::gpos::Anchor;
+use rand::prelude::ThreadRng;
+use std::ops::Sub;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<Health>();
     app.register_type::<ZeroHealth>();
+    app.register_type::<InvincibilityTimer>();
+    app.register_type::<DisplayHealth>();
 
     app.add_systems(
         Update,
         (
             tick_invincibility_timer.in_set(AppSystems::TickTimers),
+            change_invinsibile_visibility,
             despawn_done_invincibility_timers,
+            check_health.pipe(handle_health),
+            display_health,
         )
-            .run_if(in_state(Screen::Gameplay))
-            .in_set(PausableSystems),
-    )
-    .add_systems(
-        Update,
-        check_health
-            .pipe(handle_health)
             .run_if(in_state(Screen::Gameplay))
             .in_set(PausableSystems),
     );
@@ -31,6 +36,31 @@ pub struct Health(pub i8);
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub struct ZeroHealth;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[reflect(Component)]
+pub struct DisplayHealth;
+
+impl DisplayHealth {
+    pub fn spawn() -> impl Bundle {
+        (
+            Self,
+            Text2d::new("meow"),
+            TextColor(Color::BLACK),
+            TextFont {
+                font_size: 90.0,
+                ..default()
+            },
+            Visibility::Visible,
+        )
+    }
+}
+
+pub fn display_health(mut healths: Query<(&mut Text2d, &Health), With<DisplayHealth>>) {
+    for (mut display_health, health) in &mut healths {
+        display_health.0 = format!("{}", health.0);
+    }
+}
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
@@ -60,12 +90,28 @@ pub fn tick_invincibility_timer(mut timers: Query<&mut InvincibilityTimer>, time
     }
 }
 
+const CHANGE_TIME_THING: f32 = 0.5;
+
+pub fn change_invinsibile_visibility(mut query: Query<(&mut Visibility, &InvincibilityTimer)>) {
+    for (mut vis, timer) in &mut query {
+        let time_remaining = timer.0.remaining_secs();
+        let fract = (time_remaining % CHANGE_TIME_THING) / CHANGE_TIME_THING;
+
+        if fract > 0.3 {
+            *vis = Visibility::Hidden;
+        } else {
+            *vis = Visibility::Inherited;
+        }
+    }
+}
+
 pub fn despawn_done_invincibility_timers(
-    timers: Query<(&InvincibilityTimer, Entity)>,
+    mut timers: Query<(&InvincibilityTimer, Entity, &mut Visibility)>,
     mut commands: Commands,
 ) {
-    for (timer, entity) in &timers {
+    for (timer, entity, mut vis) in &mut timers {
         if timer.0.just_finished() {
+            *vis = Visibility::Inherited;
             commands.entity(entity).remove::<InvincibilityTimer>();
         }
     }
