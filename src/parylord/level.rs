@@ -3,6 +3,7 @@ use crate::parylord::assets::{EnemyAssets, LevelAssets, PlayerAssets};
 use crate::parylord::enemy::Enemy;
 use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::player::Player;
+use crate::parylord::ttl::TTL;
 use crate::parylord::CollisionLayer;
 use crate::parylord::CollisionLayer::EnemyProjectile;
 use crate::screens::Screen;
@@ -36,7 +37,7 @@ pub fn spawn_level(
                 &enemy_assets,
                 Vec2::new(150.0, -150.0),
                 LinearVelocity::ZERO,
-                // TTL::new(1000.0)
+                TTL::new(1000.0)
             )),
         ],
     ));

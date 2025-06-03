@@ -16,8 +16,6 @@ mod zaphkiel;
 
 use avian2d::prelude::Gravity;
 use avian2d::PhysicsPlugins;
-use bevy::core_pipeline::bloom::Bloom;
-use bevy::core_pipeline::tonemapping::{DebandDither, Tonemapping};
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
@@ -113,13 +111,13 @@ fn spawn_camera(mut commands: Commands) {
     commands.spawn((
         Name::new("Camera"),
         Camera2d,
-        Camera {
-            hdr: true, // 1. HDR is required for bloom
-            clear_color: ClearColorConfig::Custom(Color::BLACK),
-            ..default()
-        },
-        Tonemapping::ReinhardLuminance, // 2. Using a tonemapper that desaturates to white is recommended
-        Bloom::default(),               // 3. Enable bloom for the camera
-        DebandDither::Enabled,          // Optional: bloom causes gradients which cause banding
+        // Camera {
+        //     hdr: true, // 1. HDR is required for bloom
+        //     clear_color: ClearColorConfig::Custom(Color::BLACK),
+        //     ..default()
+        // },
+        // Tonemapping::ReinhardLuminance, // 2. Using a tonemapper that desaturates to white is recommended
+        // Bloom::default(),               // 3. Enable bloom for the camera
+        // DebandDither::Enabled,          // Optional: bloom causes gradients which cause banding
     ));
 }
