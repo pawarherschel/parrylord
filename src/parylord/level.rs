@@ -15,6 +15,7 @@ pub(super) fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();
     app.register_type::<LevelBackground>();
     app.register_type::<Walls>();
+    app.register_type::<Wall>();
 }
 
 /// A system that spawns the main level.
@@ -50,14 +51,14 @@ pub struct LevelBackground;
 impl LevelBackground {
     pub fn spawn(level_assets: &LevelAssets) -> impl Bundle {
         (
-            Name::new("Level Background"),
+            // Name::new("Level Background"),
             Self,
             Sprite {
                 image: level_assets.bg.clone(),
                 ..default()
             },
             Transform::from_xyz(0.0, 0.0, -1000.0),
-            // children![Walls::spawn()],
+            Walls::spawn(),
         )
     }
 }
@@ -65,6 +66,10 @@ impl LevelBackground {
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub struct Walls;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[reflect(Component)]
+pub struct Wall;
 
 impl Walls {
     pub fn spawn() -> impl Bundle {
@@ -74,31 +79,47 @@ impl Walls {
             children![
                 (
                     Name::new("Left Wall"),
+                    Wall,
                     Transform::from_xyz(-(1920.0 / 2.0 - 96.0 / 2.0), 0.0, 0.0),
                     RigidBody::Static,
                     Collider::rectangle(96.0, 1080.0),
-                    CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+                    CollisionLayers::new(
+                        [CollisionLayer::Walls],
+                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                    )
                 ),
                 (
                     Name::new("Right Wall"),
+                    Wall,
                     Transform::from_xyz(1920.0 / 2.0 - 96.0 / 2.0, 0.0, 0.0),
                     RigidBody::Static,
                     Collider::rectangle(96.0, 1080.0),
-                    CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+                    CollisionLayers::new(
+                        [CollisionLayer::Walls],
+                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                    )
                 ),
                 (
                     Name::new("Top Wall"),
+                    Wall,
                     Transform::from_xyz(0.0, 1080.0 / 2.0 - 96.0 / 2.0, 0.0),
                     RigidBody::Static,
                     Collider::rectangle(1920.0, 96.0),
-                    CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+                    CollisionLayers::new(
+                        [CollisionLayer::Walls],
+                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                    )
                 ),
                 (
                     Name::new("Top Wall"),
+                    Wall,
                     Transform::from_xyz(0.0, -(1080.0 / 2.0 - 96.0 / 2.0), 0.0),
                     RigidBody::Static,
                     Collider::rectangle(1920.0, 96.0),
-                    CollisionLayers::new([CollisionLayer::Walls], [CollisionLayer::Player])
+                    CollisionLayers::new(
+                        [CollisionLayer::Walls],
+                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                    )
                 )
             ],
         )

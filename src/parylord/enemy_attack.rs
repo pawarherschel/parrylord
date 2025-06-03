@@ -1,7 +1,10 @@
 use crate::parylord::assets::EnemyAssets;
 use crate::parylord::ttl::TTL;
 use crate::parylord::CollisionLayer;
-use avian2d::prelude::{Collider, CollisionLayers, LinearVelocity};
+use avian2d::prelude::{
+    AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
+    Sensor,
+};
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -32,8 +35,12 @@ impl EnemyAttack {
                 [CollisionLayer::EnemyProjectile],
                 [CollisionLayer::PlayerHurt, CollisionLayer::PlayerParry],
             ),
+            RigidBody::Kinematic,
+            Sensor,
             velocity,
+            AngularVelocity(8.0),
             ttl,
+            CollidingEntities::default(),
         )
     }
 }
