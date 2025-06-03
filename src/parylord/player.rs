@@ -1,5 +1,3 @@
-use crate::asset_tracking::LoadResource;
-use crate::exponential_decay;
 use crate::parylord::assets::PlayerAssets;
 use crate::parylord::dynamic_character_2d::CharacterControllerBundle;
 use crate::parylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
@@ -76,7 +74,7 @@ impl Player {
 }
 
 fn hurt(
-    collisions_with_hurt_box: Single<(&CollidingEntities), With<PlayerHurtBox>>,
+    collisions_with_hurt_box: Single<&CollidingEntities, With<PlayerHurtBox>>,
     health: Single<(&mut Health, Entity), (With<Player>, Without<InvincibilityTimer>)>,
     mut commands: Commands,
 ) {

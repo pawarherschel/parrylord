@@ -1,7 +1,5 @@
 use crate::asset_tracking::LoadResource;
 use bevy::prelude::*;
-use bevy::render::render_resource::{AsBindGroup, ShaderRef};
-use bevy::sprite::Material2d;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<LevelAssets>();

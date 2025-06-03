@@ -1,5 +1,5 @@
 use crate::parylord::assets::EnemyAssets;
-use crate::parylord::ttl::TTL;
+use crate::parylord::ttl::Ttl;
 use crate::parylord::CollisionLayer;
 use avian2d::prelude::{
     AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
@@ -20,7 +20,7 @@ impl EnemyAttack {
         enemy_assets: &EnemyAssets,
         pos: Vec2,
         velocity: LinearVelocity,
-        ttl: TTL,
+        ttl: Ttl,
     ) -> impl Bundle {
         (
             Self,

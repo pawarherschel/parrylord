@@ -1,23 +1,18 @@
-use crate::asset_tracking::LoadResource;
 use crate::parylord::assets::EnemyAssets;
 use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
-use crate::parylord::level::{Wall, Walls};
+use crate::parylord::level::Wall;
 use crate::parylord::player::Player;
-use crate::parylord::ttl::TTL;
+use crate::parylord::ttl::Ttl;
 use crate::parylord::CollisionLayer;
-use crate::parylord::CollisionLayer::EnemyProjectile;
 use crate::screens::Screen;
-use crate::{exponential_decay, parylord, AppSystems, PausableSystems};
-use avian2d::parry::transformation::utils::transform;
+use crate::{AppSystems, PausableSystems};
 use avian2d::prelude::{
-    Collider, CollidingEntities, CollisionEventsEnabled, CollisionLayers, LinearVelocity,
-    RigidBody, Sensor,
+    Collider, CollidingEntities, CollisionEventsEnabled, CollisionLayers, LinearVelocity, RigidBody,
 };
 use bevy::prelude::*;
 use log::{log, Level};
 use rand::{thread_rng, Rng};
-use std::thread::spawn;
 use std::time::Duration;
 
 pub fn plugin(app: &mut App) {
@@ -95,15 +90,15 @@ pub fn write_enemy_intents(
     player: Single<&GlobalTransform, With<Player>>,
     mut intent_writer: EventWriter<EnemyIntent>,
 ) {
-    for (global_transform, mut velocity, mut timer, mut enemy, entity) in &mut enemies {
-        let Enemy(mut state) = *enemy;
+    for (global_transform, mut velocity, timer, enemy, entity) in &mut enemies {
+        let Enemy(state) = *enemy;
         log!(Level::Info, "EnemyState: {state:?} Timer: {timer:?}");
         let id = match state {
             EnemyState::Start => {
                 *velocity = LinearVelocity::ZERO;
 
                 let player_pos = player.translation().truncate();
-                let my_position = global_transform.translation().truncate();
+                // let my_position = global_transform.translation().truncate();
 
                 let mut thread_rng = thread_rng();
                 let attack = thread_rng.gen_bool(0.9);
@@ -165,6 +160,8 @@ pub fn write_enemy_intents(
                 }
             }
         };
+
+        _ = id;
     }
 }
 
@@ -175,9 +172,9 @@ pub fn handle_enemy_intents(
         (&GlobalTransform, &mut LinearVelocity, &mut EnemyStateTimer),
     )>,
     mut commands: Commands,
-    player: Single<&GlobalTransform, With<Player>>,
+    // player: Single<&GlobalTransform, With<Player>>,
     enemy_assets: Res<EnemyAssets>,
-    time: Res<Time>,
+    // time: Res<Time>,
 ) -> Result {
     if intents.is_empty() {
         log!(Level::Info, "intents.is_empty()");
@@ -220,7 +217,7 @@ pub fn handle_enemy_intents(
                     &enemy_assets,
                     my_pos,
                     velocity,
-                    TTL::new(3.0),
+                    Ttl::new(3.0),
                 ));
             }
             EnemyIntent::SwitchTo(_, state) => {
@@ -243,7 +240,6 @@ pub fn tick_enemy_state_timer(mut timers: Query<&mut EnemyStateTimer>, time: Res
 }
 
 impl Enemy {
-    const PLAYER_SEARCH_RADIUS: f32 = 1000.0;
     const SPEED: f32 = 100.0;
 
     pub fn spawn(enemy_assets: &EnemyAssets, position: Vec2) -> impl Bundle {

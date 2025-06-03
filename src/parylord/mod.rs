@@ -1,4 +1,3 @@
-use crate::asset_tracking::LoadResource;
 use avian2d::prelude::PhysicsLayer;
 use bevy::prelude::*;
 

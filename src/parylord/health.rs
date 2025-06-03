@@ -1,13 +1,6 @@
 use crate::screens::Screen;
-use crate::theme::widget;
-use crate::{exponential_decay, AppSystems, PausableSystems};
-use bevy::log::tracing_subscriber::fmt::time;
+use crate::{AppSystems, PausableSystems};
 use bevy::prelude::*;
-use bevy::render::render_resource::{AsBindGroup, AsBindGroupShaderType, ShaderRef};
-use bevy::sprite::Material2d;
-use bevy::text::cosmic_text::ttf_parser::gpos::Anchor;
-use rand::prelude::ThreadRng;
-use std::ops::Sub;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<Health>();

@@ -3,7 +3,7 @@ use crate::{AppSystems, PausableSystems};
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
-    app.register_type::<TTL>();
+    app.register_type::<Ttl>();
 
     app.add_systems(
         Update,
@@ -18,21 +18,21 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-pub struct TTL(Timer);
+pub struct Ttl(Timer);
 
-impl TTL {
+impl Ttl {
     pub fn new(secs: f32) -> Self {
         Self(Timer::from_seconds(secs, TimerMode::Once))
     }
 }
 
-pub fn tick_ttl(mut timers: Query<(&mut TTL)>, time: Res<Time>) {
+pub fn tick_ttl(mut timers: Query<&mut Ttl>, time: Res<Time>) {
     for mut timer in &mut timers {
         timer.0.tick(time.delta());
     }
 }
 
-pub fn get_done_ttl_timers(timers: Query<(&TTL, Entity)>) -> Vec<Entity> {
+pub fn get_done_ttl_timers(timers: Query<(&Ttl, Entity)>) -> Vec<Entity> {
     timers
         .iter()
         .filter(|(t, _)| t.0.just_finished())

@@ -4,13 +4,10 @@ use crate::parylord::player::Player;
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{exponential_decay, AppSystems, PausableSystems};
-use avian2d::parry::na::SimdBool;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, LayerMask, Sensor};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use bevy::tasks::futures_lite::StreamExt;
 use log::{log, Level};
-use std::sync::{Arc, Mutex};
 
 pub fn plugin(app: &mut App) {
     app.register_type::<PlayerAttackIndicator>();
