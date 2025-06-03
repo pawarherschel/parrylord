@@ -104,14 +104,31 @@ pub fn write_enemy_intents(
 
                 let player_pos = player.translation().truncate();
                 let my_position = global_transform.translation().truncate();
+
                 let mut thread_rng = thread_rng();
-                let attack = thread_rng.gen_bool(0.5);
-                let search = thread_rng.gen_bool(0.5);
+                let attack = thread_rng.gen_bool(0.9);
+                let search = thread_rng.gen_bool(0.3);
+                let move_randomly = thread_rng.gen_bool(0.3);
 
                 if search {
                     intent_writer.write(EnemyIntent::Move(entity, player_pos))
                 } else if attack {
                     intent_writer.write(EnemyIntent::SwitchTo(entity, EnemyState::Attacking))
+                } else if move_randomly {
+                    let lower_x = -1920f32 / 2.0 + 96f32 + 200.0;
+                    let higher_x = 1920f32 / 2.0 - 96f32 - 200.0;
+                    let lower_y = -1080f32 / 2.0 + 96f32 + 300.0;
+                    let higher_y = 1080f32 / 2.0 - 96f32 - 300.0;
+
+                    let x_extents = lower_x..higher_x;
+                    let y_extents = lower_y..higher_y;
+
+                    let x = thread_rng.gen_range(x_extents);
+                    let y = thread_rng.gen_range(y_extents);
+
+                    let pos = Vec2::new(x, y);
+
+                    intent_writer.write(EnemyIntent::Move(entity, pos))
                 } else {
                     intent_writer.write(EnemyIntent::Idle(entity))
                 }
