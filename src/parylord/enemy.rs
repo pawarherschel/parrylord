@@ -23,7 +23,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (hurt, handle_dead_enemies, write_enemy_intents)
+        (handle_dead_enemies, write_enemy_intents)
             .run_if(in_state(Screen::Gameplay))
             .in_set(PausableSystems),
     );
@@ -177,17 +177,29 @@ pub fn handle_enemy_intents(
     // time: Res<Time>,
 ) -> Result {
     if intents.is_empty() {
-        log!(Level::Info, "intents.is_empty()");
+        log!(Level::Info, "intents.is_empty(), are all enemies dead?");
         return Ok(());
     }
 
     for &intent in intents.read() {
         if intent == EnemyIntent::None {
+            info!("intent == EnemyIntent::None");
             continue;
         }
 
-        let (mut enemy_state, (global_transform, mut velocity, mut timer)) =
-            enemies.get_mut(intent.get_entity().unwrap())?;
+        let Some(enemy) = intent.get_entity() else {
+            warn!("Some(enemy) = intent.get_entity()");
+            continue;
+        };
+
+        let Ok((mut enemy_state, (global_transform, mut velocity, mut timer))) =
+            enemies.get_mut(enemy)
+        else {
+            warn!(
+                "Ok((mut enemy_state, (global_transform, mut velocity, mut timer))) = enemies.get_mut(enemy)"
+            );
+            continue;
+        };
 
         log!(Level::Info, "intent: {intent:?}");
         match intent {
@@ -277,34 +289,6 @@ impl Enemy {
                 ],
             ),
         )
-    }
-}
-
-pub fn hurt(
-    mut q: Query<
-        (&mut Health, &CollidingEntities, Entity),
-        (With<Enemy>, Without<InvincibilityTimer>),
-    >,
-    walls: Query<Entity, With<Wall>>,
-    mut commands: Commands,
-) {
-    'outer: for (mut health, collisions, entity) in &mut q {
-        if collisions.0.is_empty() {
-            continue;
-        }
-        for colliding_entity in collisions.iter() {
-            if walls.contains(*colliding_entity) {
-                continue 'outer;
-            }
-        }
-        health.0 -= 1;
-
-        commands
-            .entity(entity)
-            .insert(InvincibilityTimer(Timer::from_seconds(
-                0.2,
-                TimerMode::Once,
-            )));
     }
 }
 

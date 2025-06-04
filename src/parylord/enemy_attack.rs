@@ -9,11 +9,16 @@ use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<EnemyAttack>();
+    app.register_type::<Attack>();
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub struct EnemyAttack;
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[reflect(Component)]
+pub struct Attack;
 
 impl EnemyAttack {
     pub fn spawn(
@@ -24,6 +29,7 @@ impl EnemyAttack {
     ) -> impl Bundle {
         (
             Self,
+            Attack,
             Transform::from_xyz(pos.x, pos.y, 3.0).with_scale(Vec3::splat(0.1)),
             Sprite {
                 image: enemy_assets.attack.clone(),
@@ -38,7 +44,7 @@ impl EnemyAttack {
             RigidBody::Kinematic,
             Sensor,
             velocity,
-            AngularVelocity(8.0),
+            AngularVelocity(3.0),
             ttl,
             CollidingEntities::default(),
         )

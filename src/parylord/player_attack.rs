@@ -1,10 +1,15 @@
 use crate::parylord::assets::PlayerAssets;
+use crate::parylord::enemy::Enemy;
 use crate::parylord::enemy_attack::EnemyAttack;
+use crate::parylord::health::{Health, InvincibilityTimer};
+use crate::parylord::level::Wall;
 use crate::parylord::player::Player;
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{exponential_decay, AppSystems, PausableSystems};
-use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, LayerMask, Sensor};
+use avian2d::prelude::{
+    Collider, CollidingEntities, CollisionLayers, LayerMask, LinearVelocity, Sensor,
+};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use log::{log, Level};
@@ -15,7 +20,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(
         Update,
-        (aim, get_parry_attempt.pipe(handle_parries))
+        (aim, get_parry_attempt.pipe(handle_parries), deal_damage)
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems),
@@ -133,7 +138,14 @@ pub fn get_parry_attempt(
     )
 }
 
-pub fn handle_parries(In(entities): In<Option<Vec<Entity>>>, mut commands: Commands) {
+pub fn handle_parries(
+    In(entities): In<Option<Vec<Entity>>>,
+    mut commands: Commands,
+    mut change_components: Query<
+        (&mut CollisionLayers, &mut LinearVelocity),
+        (With<EnemyAttack>, Without<PlayerAttack>),
+    >,
+) {
     let Some(entities) = entities else {
         return;
     };
@@ -142,14 +154,67 @@ pub fn handle_parries(In(entities): In<Option<Vec<Entity>>>, mut commands: Comma
         commands.entity(entity).remove::<EnemyAttack>();
         commands.entity(entity).insert(PlayerAttack);
 
-        commands
-            .entity(entity)
-            .entry()
-            .and_modify(|mut collision_layers: Mut<CollisionLayers>| {
-                log!(Level::Info, "from: {collision_layers:?}");
-                collision_layers.memberships = LayerMask::from([CollisionLayer::PlayerProjectile]);
-                collision_layers.filters = LayerMask::from([CollisionLayer::Enemy]);
-                log!(Level::Info, "to: {collision_layers:?}");
-            });
+        let Ok((mut collision_layers, mut velocity)) = change_components.get_mut(entity) else {
+            warn!("Entity {entity} not in change_components");
+            continue;
+        };
+
+        log!(Level::Info, "from: {collision_layers:?}");
+        collision_layers.memberships = LayerMask::from([CollisionLayer::PlayerProjectile]);
+        collision_layers.filters = LayerMask::from([CollisionLayer::Enemy]);
+        log!(Level::Info, "to: {collision_layers:?}");
+
+        **velocity *= -1.0;
     }
 }
+
+pub fn deal_damage(
+    query: Query<&CollidingEntities, With<PlayerAttack>>,
+    mut enemies: Query<&mut Health, Without<InvincibilityTimer>>,
+    mut commands: Commands,
+) {
+    'outer: for colliding_entities in &query {
+        for &entity in colliding_entities.iter() {
+            let Ok(mut health) = enemies.get_mut(entity) else {
+                continue 'outer;
+            };
+
+            health.0 -= 1;
+
+            commands
+                .entity(entity)
+                .insert(InvincibilityTimer(Timer::from_seconds(
+                    0.2,
+                    TimerMode::Once,
+                )));
+        }
+    }
+}
+
+// pub fn hurt(
+//     mut q: Query<
+//         (&mut Health, &CollidingEntities, Entity),
+//         (With<Enemy>, Without<InvincibilityTimer>),
+//     >,
+//     walls: Query<Entity, With<Wall>>,
+//     mut commands: Commands,
+// ) {
+//     'outer: for (mut health, collisions, entity) in &mut q {
+//         if collisions.0.is_empty() {
+//             continue;
+//         }
+//         for colliding_entity in collisions.iter() {
+//             if walls.contains(*colliding_entity) {
+//                 continue 'outer;
+//             }
+//         }
+//         health.0 -= 1;
+//
+//         commands
+//             .entity(entity)
+//             .insert(InvincibilityTimer(Timer::from_seconds(
+//                 0.2,
+//                 TimerMode::Once,
+//             )));
+//     }
+// }
