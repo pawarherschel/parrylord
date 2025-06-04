@@ -72,11 +72,7 @@ impl PlayerSprite {
         match self {
             Self::Front(_) => false,
             Self::Walk(dir, _) | Self::Stand(dir) => {
-                if dir.is_sign_positive() {
-                    false
-                } else {
-                    true
-                }
+                !dir.is_sign_positive()
             }
         }
     }
@@ -114,7 +110,7 @@ impl PlayerSprite {
 }
 
 #[tracing::instrument(skip_all)]
-pub fn walk_animation(mut player: Single<(&mut PlayerSprite, &LinearVelocity), With<Player>>) {
+pub fn walk_animation(player: Single<(&mut PlayerSprite, &LinearVelocity), With<Player>>) {
     let (mut player_sprite, velocity) = player.into_inner();
 
     const MINIMUM_SPEED: f32 = 1.0;
@@ -147,7 +143,7 @@ pub fn walk_animation(mut player: Single<(&mut PlayerSprite, &LinearVelocity), W
 
 #[tracing::instrument(skip_all)]
 fn animate_sprite(
-    mut player: Single<(&mut Sprite, &AnimationTimer, &mut PlayerSprite), With<Player>>,
+    player: Single<(&mut Sprite, &AnimationTimer, &mut PlayerSprite), With<Player>>,
     player_assets: Res<PlayerAssets>,
 ) {
     let (mut sprite, timer, mut sprite_state) = player.into_inner();
@@ -229,11 +225,11 @@ impl Player {
 
 #[tracing::instrument(skip_all)]
 fn hurt(
-    collisions_with_hurt_box: Single<(&CollidingEntities), With<PlayerHurtBox>>,
+    collisions_with_hurt_box: Single<&CollidingEntities, With<PlayerHurtBox>>,
     health: Single<(&mut Health, Entity), (With<Player>, Without<InvincibilityTimer>)>,
     mut commands: Commands,
 ) {
-    let (collisions) = *collisions_with_hurt_box;
+    let collisions = *collisions_with_hurt_box;
     let (mut health, entity) = health.into_inner();
 
     if !collisions.is_empty() {

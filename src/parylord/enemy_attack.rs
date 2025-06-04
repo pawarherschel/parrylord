@@ -1,4 +1,4 @@
-use crate::parylord::assets::{AttackAssets, EnemyAssets};
+use crate::parylord::assets::AttackAssets;
 use crate::parylord::attack::Attack;
 use crate::parylord::ttl::Ttl;
 use crate::parylord::CollisionLayer;

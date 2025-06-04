@@ -1,21 +1,17 @@
 use crate::parylord::assets::{AttackAssets, EnemyAssets};
 use crate::parylord::enemy_attack::EnemyAttack;
-use crate::parylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
-use crate::parylord::level::{EnemySpawn, Wall};
+use crate::parylord::health::{DisplayHealth, Health, ZeroHealth};
 use crate::parylord::player::Player;
 use crate::parylord::ttl::Ttl;
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
 use avian2d::prelude::{
-    AngularVelocity, Collider, CollidingEntities, CollisionEventsEnabled, CollisionLayers,
-    LinearVelocity, RigidBody,
+    AngularVelocity, Collider, CollisionEventsEnabled, CollisionLayers, LinearVelocity, RigidBody,
 };
-use bevy::ecs::system::entity_command::despawn;
 use bevy::prelude::*;
 use log::{log, Level};
 use rand::{random, thread_rng, Rng};
-use std::time::Duration;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<Enemy>();
@@ -60,10 +56,7 @@ pub fn handle_spawn_enemy_events(
     enemy_assets: Res<EnemyAssets>,
 ) {
     for _ in events.read() {
-        commands.spawn(Enemy::bundle(
-            &*enemy_assets,
-            get_random_vec2_in_play_area(),
-        ));
+        commands.spawn(Enemy::bundle(&enemy_assets, get_random_vec2_in_play_area()));
     }
 }
 
@@ -115,7 +108,7 @@ pub fn write_enemy_intents(
     player: Single<&GlobalTransform, With<Player>>,
     mut intent_writer: EventWriter<EnemyIntent>,
 ) {
-    for (global_transform, mut transform, mut velocity, mut spin, mut timer, enemy, entity) in
+    for (global_transform, mut transform, mut velocity, mut spin, timer, enemy, entity) in
         &mut enemies
     {
         let Enemy(state) = *enemy;
@@ -131,7 +124,8 @@ pub fn write_enemy_intents(
                 *spin = AngularVelocity::ZERO;
 
                 let travel = thread_rng.gen_bool(0.5);
-                let intent = if travel {
+
+                if travel {
                     let to_player = thread_rng.gen_bool(0.5);
                     let pos = if to_player {
                         player_pos + offset
@@ -151,9 +145,7 @@ pub fn write_enemy_intents(
                     let no_of_attacks = thread_rng.gen_range(1..=8);
 
                     intent_writer.write(EnemyIntent::Attack(entity, pos, no_of_attacks))
-                };
-
-                intent
+                }
             }
             EnemyState::MovingTo(pos) => {
                 let my_position = global_transform.translation().truncate();
@@ -228,7 +220,7 @@ pub fn handle_enemy_intents(
             continue;
         };
 
-        let Ok((mut enemy_state, (global_transform, mut velocity, mut timer))) =
+        let Ok((mut enemy_state, (global_transform, mut velocity, _timer))) =
             enemies.get_mut(enemy)
         else {
             warn!(

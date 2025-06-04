@@ -1,16 +1,11 @@
-use crate::parylord::assets::{AttackAssets, EnemyAssets, LevelAssets, PlayerAssets};
+use crate::parylord::assets::{LevelAssets, PlayerAssets};
 use crate::parylord::enemy::{Enemy, SpawnEnemy};
-use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::player::Player;
-use crate::parylord::ttl::Ttl;
 use crate::parylord::{CollisionLayer, ParrylordLevel};
 use crate::screens::Screen;
 use crate::PausableSystems;
-use avian2d::prelude::{Collider, CollisionLayers, LinearVelocity, RigidBody};
-use bevy::ecs::component::HookContext;
-use bevy::ecs::world::DeferredWorld;
+use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
-use std::thread::spawn;
 
 pub(super) fn plugin(app: &mut App) {
     app.register_type::<Level>();
@@ -41,8 +36,8 @@ impl Level {
             Visibility::default(),
             StateScoped(Screen::Gameplay),
             children![
-                Player::bundle(&player_assets),
-                LevelBackground::bundle(&level_assets),
+                Player::bundle(player_assets),
+                LevelBackground::bundle(level_assets),
                 EnemySpawn,
             ],
         )
@@ -55,7 +50,7 @@ pub fn spawn_level(
     level_assets: Res<LevelAssets>,
     player_assets: Res<PlayerAssets>,
 ) {
-    commands.spawn(Level::bundle(&*level_assets, &*player_assets));
+    commands.spawn(Level::bundle(&level_assets, &player_assets));
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
@@ -71,7 +66,7 @@ fn new_level(
         return;
     }
 
-    for _ in (0..level.0) {
+    for _ in 0..level.0 {
         spawn_enemy_event_writer.write(SpawnEnemy);
     }
 

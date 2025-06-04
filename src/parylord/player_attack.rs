@@ -1,24 +1,18 @@
-use crate::parylord::assets::{AttackAssets, EnemyAssets, PlayerAssets};
+use crate::parylord::assets::{AttackAssets, PlayerAssets};
 use crate::parylord::attack::Attack;
-use crate::parylord::enemy::Enemy;
 use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::health::{Health, InvincibilityTimer};
-use crate::parylord::level::Wall;
 use crate::parylord::player::Player;
 use crate::parylord::ttl::Ttl;
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{exponential_decay, AppSystems, PausableSystems};
 use avian2d::prelude::{
-    AngularVelocity, Collider, CollidingEntities, CollisionLayers, LayerMask, LinearVelocity,
-    RigidBody, Sensor,
+    AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
+    Sensor,
 };
-use bevy::ecs::entity::{Entities, MapEntities};
-use bevy::ecs::system::entity_command::despawn;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use log::{log, Level};
-use std::clone;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<PlayerAttackIndicator>();
@@ -131,8 +125,8 @@ fn angle_to_mouse_from_global_transform(
     let pos = pos.origin.truncate();
 
     let vec_to_mouse = (pos.extend(gt.translation().z) - gt.translation()).normalize_or_zero();
-    let alpha = vec_to_mouse.y.atan2(vec_to_mouse.x);
-    alpha
+
+    vec_to_mouse.y.atan2(vec_to_mouse.x)
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
@@ -222,11 +216,11 @@ pub fn handle_parries(
     };
 
     let number_of_entities = entities.len().clamp(0, AttackAssets::MAX as usize - 1); //remove clamp
-    let Some(&entity) = entities.get(0) else {
+    let Some(&entity) = entities.first() else {
         warn!("Some(&entity) = entities.get(0)");
         return;
     };
-    let Ok((velocity, transform, ttl)) = change_components.get(entity) else {
+    let Ok((velocity, _transform, ttl)) = change_components.get(entity) else {
         warn!("Entity {entity} not in change_components");
         return;
     };
@@ -267,7 +261,7 @@ pub fn handle_parries(
 
     commands.spawn(PlayerAttack::bundle(
         number_of_entities as u8, //remove clamp
-        &*attack_assets,
+        &attack_assets,
         pos,
         velocity,
         ttl,
