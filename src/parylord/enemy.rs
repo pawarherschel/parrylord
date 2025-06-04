@@ -1,24 +1,27 @@
-use crate::parylord::assets::EnemyAssets;
+use crate::parylord::assets::{AttackAssets, EnemyAssets};
 use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
-use crate::parylord::level::Wall;
+use crate::parylord::level::{EnemySpawn, Wall};
 use crate::parylord::player::Player;
 use crate::parylord::ttl::Ttl;
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
 use avian2d::prelude::{
-    Collider, CollidingEntities, CollisionEventsEnabled, CollisionLayers, LinearVelocity, RigidBody,
+    AngularVelocity, Collider, CollidingEntities, CollisionEventsEnabled, CollisionLayers,
+    LinearVelocity, RigidBody,
 };
+use bevy::ecs::system::entity_command::despawn;
 use bevy::prelude::*;
 use log::{log, Level};
-use rand::{thread_rng, Rng};
+use rand::{random, thread_rng, Rng};
 use std::time::Duration;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<Enemy>();
     app.register_type::<EnemyAssets>();
     app.add_event::<EnemyIntent>();
+    app.add_event::<SpawnEnemy>();
     app.register_type::<EnemyStateTimer>();
 
     app.add_systems(
@@ -30,7 +33,7 @@ pub fn plugin(app: &mut App) {
 
     app.add_systems(
         PreUpdate,
-        (handle_enemy_intents,)
+        (handle_enemy_intents, handle_spawn_enemy_events)
             .run_if(in_state(Screen::Gameplay))
             .in_set(PausableSystems),
     );
@@ -48,13 +51,29 @@ pub fn plugin(app: &mut App) {
 #[reflect(Component)]
 pub struct Enemy(EnemyState);
 
+#[derive(Event, Debug, Clone, Copy, PartialEq, Default, Reflect)]
+pub struct SpawnEnemy;
+
+pub fn handle_spawn_enemy_events(
+    mut events: EventReader<SpawnEnemy>,
+    mut commands: Commands,
+    enemy_assets: Res<EnemyAssets>,
+) {
+    for _ in events.read() {
+        commands.spawn(Enemy::bundle(
+            &*enemy_assets,
+            get_random_vec2_in_play_area(),
+        ));
+    }
+}
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Default, Reflect)]
 #[reflect(Component)]
 pub enum EnemyState {
-    #[default]
     Start,
     MovingTo(Vec2),
-    Attacking,
+    Attacking(u8),
+    #[default]
     Idling,
 }
 
@@ -64,25 +83,31 @@ pub enum EnemyIntent {
     None,
     Idle(Entity),
     Move(Entity, Vec2),
-    Attack(Entity, Vec2),
-    SwitchTo(Entity, EnemyState),
+    Attack(Entity, Vec2, u8),
+    GoToStart(Entity),
 }
 
 impl EnemyIntent {
-    const fn get_entity(&self) -> Option<Entity> {
+    #[tracing::instrument()]
+    fn get_entity(&self) -> Option<Entity> {
         match self {
             Self::None => None,
-            Self::Idle(it) | Self::Move(it, _) | Self::Attack(it, _) | Self::SwitchTo(it, _) => {
+            Self::Idle(it) | Self::Move(it, _) | Self::Attack(it, _, _) | Self::GoToStart(it) => {
                 Some(*it)
             }
         }
     }
 }
 
+const DEBUG_STATE_MACHINE: bool = true;
+
+#[tracing::instrument(skip_all)]
 pub fn write_enemy_intents(
     mut enemies: Query<(
         &GlobalTransform,
+        &mut Transform,
         &mut LinearVelocity,
+        &mut AngularVelocity,
         &mut EnemyStateTimer,
         &mut Enemy,
         Entity,
@@ -90,71 +115,80 @@ pub fn write_enemy_intents(
     player: Single<&GlobalTransform, With<Player>>,
     mut intent_writer: EventWriter<EnemyIntent>,
 ) {
-    for (global_transform, mut velocity, timer, enemy, entity) in &mut enemies {
+    for (global_transform, mut transform, mut velocity, mut spin, mut timer, enemy, entity) in
+        &mut enemies
+    {
         let Enemy(state) = *enemy;
-        log!(Level::Info, "EnemyState: {state:?} Timer: {timer:?}");
+        let player_pos = player.translation().truncate();
+        let timer_expired = timer.0.just_finished();
+        let mut thread_rng = thread_rng();
+        let offset = (random::<Vec2>() * 2.0 - Vec2::splat(1.0)) * 30.0;
+
         let id = match state {
             EnemyState::Start => {
+                transform.rotation = Quat::IDENTITY;
                 *velocity = LinearVelocity::ZERO;
+                *spin = AngularVelocity::ZERO;
 
-                let player_pos = player.translation().truncate();
-                // let my_position = global_transform.translation().truncate();
-
-                let mut thread_rng = thread_rng();
-                let attack = thread_rng.gen_bool(0.9);
-                let search = thread_rng.gen_bool(0.3);
-                let move_randomly = thread_rng.gen_bool(0.3);
-
-                if search {
-                    intent_writer.write(EnemyIntent::Move(entity, player_pos))
-                } else if attack {
-                    intent_writer.write(EnemyIntent::SwitchTo(entity, EnemyState::Attacking))
-                } else if move_randomly {
-                    let lower_x = -1920f32 / 2.0 + 96f32 + 200.0;
-                    let higher_x = 1920f32 / 2.0 - 96f32 - 200.0;
-                    let lower_y = -1080f32 / 2.0 + 96f32 + 300.0;
-                    let higher_y = 1080f32 / 2.0 - 96f32 - 300.0;
-
-                    let x_extents = lower_x..higher_x;
-                    let y_extents = lower_y..higher_y;
-
-                    let x = thread_rng.gen_range(x_extents);
-                    let y = thread_rng.gen_range(y_extents);
-
-                    let pos = Vec2::new(x, y);
+                let travel = thread_rng.gen_bool(0.5);
+                let intent = if travel {
+                    let to_player = thread_rng.gen_bool(0.5);
+                    let pos = if to_player {
+                        player_pos + offset
+                    } else {
+                        get_random_vec2_in_play_area() + offset
+                    };
 
                     intent_writer.write(EnemyIntent::Move(entity, pos))
                 } else {
-                    intent_writer.write(EnemyIntent::Idle(entity))
-                }
+                    let to_player = thread_rng.gen_bool(0.9);
+                    let pos = if to_player {
+                        player_pos + offset
+                    } else {
+                        get_random_vec2_in_play_area() + offset
+                    };
+
+                    let no_of_attacks = thread_rng.gen_range(1..=8);
+
+                    intent_writer.write(EnemyIntent::Attack(entity, pos, no_of_attacks))
+                };
+
+                intent
             }
             EnemyState::MovingTo(pos) => {
                 let my_position = global_transform.translation().truncate();
-                log!(
-                    Level::Info,
-                    "pos: {pos} my_position: {my_position} pos.distance_squared(my_position): {}",
-                    pos.distance_squared(my_position)
-                );
+                let reached_destination = pos.distance_squared(my_position) < 500.0;
 
-                if pos.distance_squared(my_position) < 500.0 {
-                    intent_writer.write(EnemyIntent::Idle(entity))
+                if timer_expired || reached_destination {
+                    let to_player = thread_rng.gen_bool(0.9);
+
+                    let pos = if to_player {
+                        player_pos + offset
+                    } else {
+                        get_random_vec2_in_play_area() + offset
+                    };
+
+                    let no_of_attacks = thread_rng.gen_range(1..=8);
+
+                    intent_writer.write(EnemyIntent::Attack(entity, pos, no_of_attacks))
                 } else {
-                    intent_writer.write(EnemyIntent::Move(entity, pos))
+                    intent_writer.write(EnemyIntent::None)
                 }
             }
-            EnemyState::Attacking => {
-                let player_pos = player.translation().truncate();
-                let mut thread_rng = thread_rng();
-                let attack: bool = thread_rng.gen_bool(0.5);
-                if attack {
-                    intent_writer.write(EnemyIntent::Attack(entity, player_pos))
+            EnemyState::Attacking(n) => {
+                if n != 0 {
+                    intent_writer.write(EnemyIntent::Attack(entity, player_pos, n - 1))
                 } else {
-                    intent_writer.write(EnemyIntent::SwitchTo(entity, EnemyState::Idling))
+                    intent_writer.write(EnemyIntent::Idle(entity))
                 }
             }
             EnemyState::Idling => {
-                if timer.0.finished() {
-                    intent_writer.write(EnemyIntent::SwitchTo(entity, EnemyState::Start))
+                transform.rotation = Quat::IDENTITY;
+                *velocity = LinearVelocity::ZERO;
+                *spin = AngularVelocity::ZERO;
+
+                if timer_expired {
+                    intent_writer.write(EnemyIntent::GoToStart(entity))
                 } else {
                     intent_writer.write(EnemyIntent::None)
                 }
@@ -165,6 +199,7 @@ pub fn write_enemy_intents(
     }
 }
 
+#[tracing::instrument(skip_all)]
 pub fn handle_enemy_intents(
     mut intents: EventReader<EnemyIntent>,
     mut enemies: Query<(
@@ -173,17 +208,18 @@ pub fn handle_enemy_intents(
     )>,
     mut commands: Commands,
     // player: Single<&GlobalTransform, With<Player>>,
-    enemy_assets: Res<EnemyAssets>,
+    attack_assets: Res<AttackAssets>,
     // time: Res<Time>,
 ) -> Result {
     if intents.is_empty() {
-        log!(Level::Info, "intents.is_empty(), are all enemies dead?");
+        if DEBUG_STATE_MACHINE {
+            log!(Level::Info, "intents.is_empty(), are all enemies dead?");
+        }
         return Ok(());
     }
 
     for &intent in intents.read() {
         if intent == EnemyIntent::None {
-            info!("intent == EnemyIntent::None");
             continue;
         }
 
@@ -200,17 +236,15 @@ pub fn handle_enemy_intents(
             );
             continue;
         };
-
-        log!(Level::Info, "intent: {intent:?}");
-        match intent {
+        // if DEBUG_STATE_MACHINE {
+        //     log!(Level::Info, "intent: {intent:?}");
+        // }
+        enemy_state.0 = match intent {
             EnemyIntent::None => {
-                enemy_state.0 = EnemyState::Start;
+                info!("MEOWWW");
+                EnemyState::Start
             }
-            EnemyIntent::Idle(_) => {
-                *velocity = LinearVelocity::ZERO;
-                timer.0.set_duration(Duration::from_secs_f32(0.5));
-                enemy_state.0 = EnemyState::Idling;
-            }
+            EnemyIntent::Idle(_) => EnemyState::Idling,
             EnemyIntent::Move(_, pos) => {
                 let curr = global_transform.translation();
                 let target = pos.extend(curr.z);
@@ -218,23 +252,29 @@ pub fn handle_enemy_intents(
                 let dir = (target - curr).normalize();
                 let target = dir * Enemy::SPEED;
 
-                enemy_state.0 = EnemyState::MovingTo(pos);
-
                 *velocity = LinearVelocity::from(target.truncate());
+
+                EnemyState::MovingTo(pos)
             }
-            EnemyIntent::Attack(_, player_pos) => {
+            EnemyIntent::Attack(_, pos, n) => {
                 let my_pos = global_transform.translation().truncate();
-                let velocity = LinearVelocity((player_pos - my_pos) * 1.0);
-                commands.spawn(EnemyAttack::spawn(
-                    &enemy_assets,
+                let velocity = LinearVelocity(
+                    (pos - my_pos).normalize() * 500.0 + (((random::<f32>() * 2.0) - 1.0) * 200.0),
+                );
+                commands.spawn(EnemyAttack::bundle(
+                    &attack_assets,
                     my_pos,
                     velocity,
-                    Ttl::new(3.0),
+                    Ttl::new(random::<f32>() * 3.0),
                 ));
+
+                if n > 0 {
+                    EnemyState::Attacking(n - 1)
+                } else {
+                    EnemyState::Idling
+                }
             }
-            EnemyIntent::SwitchTo(_, state) => {
-                enemy_state.0 = state;
-            }
+            EnemyIntent::GoToStart(_) => EnemyState::Start,
         }
     }
 
@@ -245,6 +285,7 @@ pub fn handle_enemy_intents(
 #[reflect(Component)]
 pub struct EnemyStateTimer(Timer);
 
+#[tracing::instrument(skip_all)]
 pub fn tick_enemy_state_timer(mut timers: Query<&mut EnemyStateTimer>, time: Res<Time>) {
     for mut timer in &mut timers {
         timer.0.tick(time.delta());
@@ -254,14 +295,15 @@ pub fn tick_enemy_state_timer(mut timers: Query<&mut EnemyStateTimer>, time: Res
 impl Enemy {
     const SPEED: f32 = 100.0;
 
-    pub fn spawn(enemy_assets: &EnemyAssets, position: Vec2) -> impl Bundle {
+    #[tracing::instrument()]
+    pub fn bundle(enemy_assets: &EnemyAssets, position: Vec2) -> impl Bundle {
         let mut rng = thread_rng();
         let pick = rng.gen_range(0..=EnemyAssets::MAX_ASSETS);
         (
             Self::default(),
             Health(15),
-            DisplayHealth::spawn(),
-            EnemyStateTimer(Timer::from_seconds(2.0, TimerMode::Once)),
+            DisplayHealth::bundle(),
+            EnemyStateTimer(Timer::from_seconds(2.0, TimerMode::Repeating)),
             Transform::from_translation(position.extend(1.0)),
             Sprite {
                 image: match pick % EnemyAssets::MAX_ASSETS {
@@ -292,11 +334,29 @@ impl Enemy {
     }
 }
 
+#[tracing::instrument(skip_all)]
 pub fn handle_dead_enemies(
     dead_enemies: Query<Entity, (With<ZeroHealth>, With<Enemy>)>,
     mut commands: Commands,
 ) {
     for entity in dead_enemies {
-        commands.entity(entity).despawn();
+        let Ok(mut entity) = commands.get_entity(entity) else {
+            continue;
+        };
+        entity.despawn();
     }
+}
+
+pub fn get_random_vec2_in_play_area() -> Vec2 {
+    let mut thread_rng = rand::thread_rng();
+    const PLAY_AREA_X: f32 = 600.0;
+    const PLAY_AREA_Y: f32 = 200.0;
+
+    let x_extents = -PLAY_AREA_X..PLAY_AREA_X;
+    let y_extents = -PLAY_AREA_Y..PLAY_AREA_Y;
+
+    let x = thread_rng.gen_range(x_extents);
+    let y = thread_rng.gen_range(y_extents);
+
+    Vec2::new(x, y)
 }

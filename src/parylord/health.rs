@@ -35,7 +35,7 @@ pub struct ZeroHealth;
 pub struct DisplayHealth;
 
 impl DisplayHealth {
-    pub fn spawn() -> impl Bundle {
+    pub fn bundle() -> impl Bundle {
         (
             Self,
             Text2d::new("meow"),

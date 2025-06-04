@@ -1,18 +1,24 @@
-use crate::parylord::assets::PlayerAssets;
+use crate::parylord::assets::{AttackAssets, EnemyAssets, PlayerAssets};
+use crate::parylord::attack::Attack;
 use crate::parylord::enemy::Enemy;
 use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::health::{Health, InvincibilityTimer};
 use crate::parylord::level::Wall;
 use crate::parylord::player::Player;
+use crate::parylord::ttl::Ttl;
 use crate::parylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{exponential_decay, AppSystems, PausableSystems};
 use avian2d::prelude::{
-    Collider, CollidingEntities, CollisionLayers, LayerMask, LinearVelocity, Sensor,
+    AngularVelocity, Collider, CollidingEntities, CollisionLayers, LayerMask, LinearVelocity,
+    RigidBody, Sensor,
 };
+use bevy::ecs::entity::{Entities, MapEntities};
+use bevy::ecs::system::entity_command::despawn;
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use log::{log, Level};
+use std::clone;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<PlayerAttackIndicator>();
@@ -32,7 +38,7 @@ pub fn plugin(app: &mut App) {
 pub struct PlayerAttackIndicator;
 
 impl PlayerAttackIndicator {
-    pub fn spawn(player_assets: &PlayerAssets) -> impl Bundle {
+    pub fn bundle(player_assets: &PlayerAssets) -> impl Bundle {
         (
             Name::new("PlayerAttackIndicator"),
             Self,
@@ -74,13 +80,7 @@ fn aim(
     let (mut attack_indicator, gt) = attack_indicator.single_mut()?;
     let (camera, camera_transform) = *camera;
 
-    let Ok(pos) = camera.viewport_to_world(camera_transform, mouse) else {
-        return Ok(());
-    };
-    let pos = pos.origin.truncate();
-
-    let vec_to_mouse = (pos.extend(gt.translation().z) - gt.translation()).normalize_or_zero();
-    let alpha = vec_to_mouse.y.atan2(vec_to_mouse.x);
+    let alpha = angle_to_mouse_from_global_transform(mouse, gt, camera, camera_transform);
 
     let mut curr_quat = attack_indicator.rotation;
     let mut target_quat = Quat::from_rotation_z(alpha);
@@ -116,9 +116,76 @@ fn aim(
     Ok(())
 }
 
+fn angle_to_mouse_from_global_transform(
+    mouse: Vec2,
+    gt: &GlobalTransform,
+    camera: &Camera,
+    camera_transform: &GlobalTransform,
+) -> f32 {
+    let Ok(pos) = camera.viewport_to_world(camera_transform, mouse) else {
+        panic!(
+            "Ok(pos) = camera.viewport_to_world(camera_transform: {camera_transform:?}, mouse: {mouse:?}): {:?}",
+            camera.viewport_to_world(camera_transform, mouse)
+        );
+    };
+    let pos = pos.origin.truncate();
+
+    let vec_to_mouse = (pos.extend(gt.translation().z) - gt.translation()).normalize_or_zero();
+    let alpha = vec_to_mouse.y.atan2(vec_to_mouse.x);
+    alpha
+}
+
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub struct PlayerAttack;
+
+impl PlayerAttack {
+    pub fn bundle(
+        power: u8,
+        attack_assets: &AttackAssets,
+        pos: Vec2,
+        velocity: LinearVelocity,
+        ttl: Ttl,
+    ) -> impl Bundle {
+        (
+            Self,
+            Attack(power),
+            Transform::from_xyz(pos.x, pos.y, 3.0).with_scale(Vec3::splat(0.1)),
+            Sprite {
+                image: PlayerAttack::get_sprite(power % AttackAssets::MAX, attack_assets),
+                color: Color::srgb(0.1, 0.1, 30.0),
+                ..default()
+            },
+            Collider::circle(128.0),
+            CollisionLayers::new([CollisionLayer::PlayerProjectile], [CollisionLayer::Enemy]),
+            RigidBody::Kinematic,
+            Sensor,
+            velocity,
+            AngularVelocity(-3.0),
+            ttl,
+            CollidingEntities::default(),
+        )
+    }
+
+    fn get_sprite(power: u8, attack_assets: &AttackAssets) -> Handle<Image> {
+        let power = power % AttackAssets::MAX;
+        match power {
+            0 => attack_assets._0.clone(),
+            1 => attack_assets._1.clone(),
+            2 => attack_assets._2.clone(),
+            3 => attack_assets._3.clone(),
+            4 => attack_assets._4.clone(),
+            5 => attack_assets._5.clone(),
+            6 => attack_assets._6.clone(),
+            7 => attack_assets._7.clone(),
+            8 => attack_assets._8.clone(),
+            9 => attack_assets._9.clone(),
+            10 => attack_assets._10.clone(),
+            11 => attack_assets._11.clone(),
+            _what => unreachable!("get_sprite: {_what}"),
+        }
+    }
+}
 
 pub fn get_parry_attempt(
     query: Single<&CollidingEntities, (With<PlayerAttackIndicator>, Without<Player>)>,
@@ -141,45 +208,91 @@ pub fn get_parry_attempt(
 pub fn handle_parries(
     In(entities): In<Option<Vec<Entity>>>,
     mut commands: Commands,
-    mut change_components: Query<
-        (&mut CollisionLayers, &mut LinearVelocity),
+    change_components: Query<
+        (&LinearVelocity, &Transform, &Ttl),
         (With<EnemyAttack>, Without<PlayerAttack>),
     >,
+    player_attack_indicator: Single<&GlobalTransform, With<PlayerAttackIndicator>>,
+    attack_assets: Res<AttackAssets>,
+    window: Single<&Window>,
+    camera: Single<(&Camera, &GlobalTransform)>,
 ) {
     let Some(entities) = entities else {
         return;
     };
 
-    for entity in entities {
-        commands.entity(entity).remove::<EnemyAttack>();
-        commands.entity(entity).insert(PlayerAttack);
+    let number_of_entities = entities.len().clamp(0, AttackAssets::MAX as usize - 1); //remove clamp
+    let Some(&entity) = entities.get(0) else {
+        warn!("Some(&entity) = entities.get(0)");
+        return;
+    };
+    let Ok((velocity, transform, ttl)) = change_components.get(entity) else {
+        warn!("Entity {entity} not in change_components");
+        return;
+    };
 
-        let Ok((mut collision_layers, mut velocity)) = change_components.get_mut(entity) else {
-            warn!("Entity {entity} not in change_components");
+    let pos = entities
+        .iter()
+        .flat_map(|&x| change_components.get(x))
+        .map(|(_, x, _)| x)
+        .map(|x| x.translation)
+        .map(|x| x.truncate())
+        .collect::<Vec<_>>();
+
+    let Some(sum) = pos.iter().copied().reduce(|acc, x| acc + x) else {
+        warn!("Some(&sum) = pos.iter().reduce(|acc, x| acc + x)");
+        return;
+    };
+    let total = pos.len() as f32;
+
+    let window = *window;
+    let Some(mouse) = window.cursor_position() else {
+        warn!("Some(mouse) = window.cursor_position()");
+        return;
+    };
+    let (camera, camera_transform) = *camera;
+
+    let angle = angle_to_mouse_from_global_transform(
+        mouse,
+        *player_attack_indicator,
+        camera,
+        camera_transform,
+    );
+    let angle = Vec2::from_angle(angle);
+    let speed = velocity.0.length();
+
+    let pos = sum / total;
+    let velocity = LinearVelocity(angle * speed); // average the speed
+    let ttl = Ttl::new(ttl.0.remaining_secs() + 1.0);
+
+    commands.spawn(PlayerAttack::bundle(
+        number_of_entities as u8, //remove clamp
+        &*attack_assets,
+        pos,
+        velocity,
+        ttl,
+    ));
+
+    for entity in entities {
+        let Ok(mut entity) = commands.get_entity(entity) else {
             continue;
         };
-
-        log!(Level::Info, "from: {collision_layers:?}");
-        collision_layers.memberships = LayerMask::from([CollisionLayer::PlayerProjectile]);
-        collision_layers.filters = LayerMask::from([CollisionLayer::Enemy]);
-        log!(Level::Info, "to: {collision_layers:?}");
-
-        **velocity *= -1.0;
+        entity.despawn();
     }
 }
 
 pub fn deal_damage(
-    query: Query<&CollidingEntities, With<PlayerAttack>>,
+    query: Query<(&CollidingEntities, &Attack, Entity), With<PlayerAttack>>,
     mut enemies: Query<&mut Health, Without<InvincibilityTimer>>,
     mut commands: Commands,
 ) {
-    'outer: for colliding_entities in &query {
+    'outer: for (colliding_entities, attack, attack_entity) in &query {
         for &entity in colliding_entities.iter() {
             let Ok(mut health) = enemies.get_mut(entity) else {
                 continue 'outer;
             };
 
-            health.0 -= 1;
+            health.0 -= attack.0 as i8;
 
             commands
                 .entity(entity)
@@ -187,34 +300,11 @@ pub fn deal_damage(
                     0.2,
                     TimerMode::Once,
                 )));
+
+            let Ok(mut attack_entity) = commands.get_entity(attack_entity) else {
+                continue;
+            };
+            attack_entity.despawn();
         }
     }
 }
-
-// pub fn hurt(
-//     mut q: Query<
-//         (&mut Health, &CollidingEntities, Entity),
-//         (With<Enemy>, Without<InvincibilityTimer>),
-//     >,
-//     walls: Query<Entity, With<Wall>>,
-//     mut commands: Commands,
-// ) {
-//     'outer: for (mut health, collisions, entity) in &mut q {
-//         if collisions.0.is_empty() {
-//             continue;
-//         }
-//         for colliding_entity in collisions.iter() {
-//             if walls.contains(*colliding_entity) {
-//                 continue 'outer;
-//             }
-//         }
-//         health.0 -= 1;
-//
-//         commands
-//             .entity(entity)
-//             .insert(InvincibilityTimer(Timer::from_seconds(
-//                 0.2,
-//                 TimerMode::Once,
-//             )));
-//     }
-// }

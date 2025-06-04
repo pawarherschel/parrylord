@@ -1,5 +1,6 @@
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
+use bevy::ecs::system::entity_command::despawn;
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -18,7 +19,7 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-pub struct Ttl(Timer);
+pub struct Ttl(pub(crate) Timer);
 
 impl Ttl {
     pub fn new(secs: f32) -> Self {
@@ -42,6 +43,9 @@ pub fn get_done_ttl_timers(timers: Query<(&Ttl, Entity)>) -> Vec<Entity> {
 
 pub fn handle_done_ttl_timers(In(timers): In<Vec<Entity>>, mut commands: Commands) {
     for timer in timers {
-        commands.entity(timer).despawn();
+        let Ok(mut entity) = commands.get_entity(timer) else {
+            continue;
+        };
+        entity.despawn();
     }
 }

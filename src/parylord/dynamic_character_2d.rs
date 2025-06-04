@@ -1,18 +1,22 @@
 // https://github.com/Jondolf/avian/blob/main/crates/avian2d/examples/dynamic_character_2d/plugin.rs
 
-use crate::exponential_decay;
 use crate::parylord::CollisionLayer;
+use crate::screens::Screen;
+use crate::{exponential_decay, PausableSystems};
 use avian2d::math::{AdjustPrecision, Scalar, Vector};
 use avian2d::prelude::*;
 use bevy::prelude::*;
 
-pub struct CharacterControllerPlugin;
+pub fn plugin(app: &mut App) {
+    app.add_event::<MovementAction>();
 
-impl Plugin for CharacterControllerPlugin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<MovementAction>()
-            .add_systems(Update, (keyboard_input, movement).chain());
-    }
+    app.add_systems(
+        Update,
+        (keyboard_input, movement)
+            .chain()
+            .run_if(in_state(Screen::Gameplay))
+            .in_set(PausableSystems),
+    );
 }
 
 /// An event sent for a movement input action.
