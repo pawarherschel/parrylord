@@ -2,7 +2,7 @@
 
 use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
-use crate::{PausableSystems, exponential_decay};
+use crate::{exponential_decay, PausableSystems};
 use avian2d::math::{AdjustPrecision, Scalar, Vector};
 use avian2d::prelude::*;
 use bevy::prelude::*;
@@ -96,14 +96,14 @@ fn keyboard_input(
     let up = keyboard_input.any_pressed([KeyCode::KeyW, KeyCode::ArrowUp]);
     let down = keyboard_input.any_pressed([KeyCode::KeyS, KeyCode::ArrowDown]);
 
-    let horizontal = f32::from(right as i8 - left as i8);
-    let vertical = f32::from(up as i8 - down as i8);
+    let horizontal = f32::from(i8::from(right) - i8::from(left));
+    let vertical = f32::from(i8::from(up) - i8::from(down));
     let direction = Vector::new(horizontal, vertical);
 
-    movement_event_writer.write(if direction.length_squared() != 0.0 {
-        MovementAction::Move(direction)
-    } else {
+    movement_event_writer.write(if direction.length_squared() == 0.0 {
         MovementAction::None
+    } else {
+        MovementAction::Move(direction)
     });
 }
 

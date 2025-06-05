@@ -1,9 +1,9 @@
-use crate::PausableSystems;
 use crate::parrylord::assets::{LevelAssets, PlayerAssets};
 use crate::parrylord::enemy::{Enemy, SpawnEnemy};
 use crate::parrylord::player::Player;
-use crate::parrylord::{CollisionLayer, ParrylordSingleton};
+use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
+use crate::{ParrylordSingleton, PausableSystems};
 use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 
@@ -30,11 +30,11 @@ pub struct Level;
 impl Level {
     pub fn bundle(level_assets: &LevelAssets, player_assets: &PlayerAssets) -> impl Bundle {
         (
+            StateScoped(Screen::Gameplay),
             Name::new("Level"),
-            Level,
+            Self,
             Transform::default(),
             Visibility::default(),
-            StateScoped(Screen::Gameplay),
             children![
                 Player::bundle(player_assets),
                 LevelBackground::bundle(level_assets),
@@ -49,8 +49,10 @@ pub fn spawn_level(
     mut commands: Commands,
     level_assets: Res<LevelAssets>,
     player_assets: Res<PlayerAssets>,
+    mut parrylord_singleton: ResMut<ParrylordSingleton>,
 ) {
     commands.spawn(Level::bundle(&level_assets, &player_assets));
+    *parrylord_singleton = ParrylordSingleton::default();
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
@@ -99,6 +101,7 @@ pub struct LevelBackground;
 impl LevelBackground {
     pub fn bundle(level_assets: &LevelAssets) -> impl Bundle {
         (
+            // StateScoped(Screen::Gameplay),
             // Name::new("Level Background"),
             Self,
             Sprite {
@@ -133,7 +136,12 @@ impl Walls {
                     Collider::rectangle(96.0, 1080.0),
                     CollisionLayers::new(
                         [CollisionLayer::Walls],
-                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                        [
+                            CollisionLayer::Player,
+                            CollisionLayer::PlayerProjectile,
+                            CollisionLayer::Enemy,
+                            CollisionLayer::EnemyProjectile
+                        ]
                     )
                 ),
                 (
@@ -144,7 +152,12 @@ impl Walls {
                     Collider::rectangle(96.0, 1080.0),
                     CollisionLayers::new(
                         [CollisionLayer::Walls],
-                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                        [
+                            CollisionLayer::Player,
+                            CollisionLayer::PlayerProjectile,
+                            CollisionLayer::Enemy,
+                            CollisionLayer::EnemyProjectile
+                        ]
                     )
                 ),
                 (
@@ -155,7 +168,12 @@ impl Walls {
                     Collider::rectangle(1920.0, 96.0),
                     CollisionLayers::new(
                         [CollisionLayer::Walls],
-                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                        [
+                            CollisionLayer::Player,
+                            CollisionLayer::PlayerProjectile,
+                            CollisionLayer::Enemy,
+                            CollisionLayer::EnemyProjectile
+                        ]
                     )
                 ),
                 (
@@ -166,7 +184,12 @@ impl Walls {
                     Collider::rectangle(1920.0, 96.0),
                     CollisionLayers::new(
                         [CollisionLayer::Walls],
-                        [CollisionLayer::Player, CollisionLayer::Enemy]
+                        [
+                            CollisionLayer::Player,
+                            CollisionLayer::PlayerProjectile,
+                            CollisionLayer::Enemy,
+                            CollisionLayer::EnemyProjectile
+                        ]
                     )
                 )
             ],

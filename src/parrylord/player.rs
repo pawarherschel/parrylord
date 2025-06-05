@@ -1,15 +1,16 @@
-use crate::parrylord::CollisionLayer;
+use crate::menus::Menu;
 use crate::parrylord::assets::PlayerAssets;
 use crate::parrylord::dynamic_character_2d::CharacterControllerBundle;
 use crate::parrylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
 use crate::parrylord::player_attack::PlayerAttackIndicator;
+use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
 use avian2d::parry::na::RealField;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Sensor};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use log::{Level, log};
+use log::{log, Level};
 use std::fmt::Debug;
 
 pub fn plugin(app: &mut App) {
@@ -165,7 +166,7 @@ pub struct AnimationTimer(Timer);
 impl AnimationTimer {
     #[tracing::instrument()]
     fn from_seconds(seconds: f32) -> impl Bundle {
-        Self(Timer::from_seconds(seconds, TimerMode::Repeating))
+        (Self(Timer::from_seconds(seconds, TimerMode::Repeating)),)
     }
 }
 #[tracing::instrument(skip_all)]
@@ -231,7 +232,7 @@ fn hurt(
     let (mut health, entity) = health.into_inner();
 
     if !collisions.is_empty() {
-        log!(Level::Info, "Health: {health:?}");
+        // log!(Level::Info, "Health: {health:?}");
         health.0 -= 1;
 
         commands
@@ -254,11 +255,11 @@ fn hurt(
 #[tracing::instrument(skip_all)]
 fn handle_player_death(
     query: Option<Single<(), (With<Player>, With<ZeroHealth>)>>,
-    next: ResMut<NextState<Screen>>,
+    mut next_screen: ResMut<NextState<Screen>>,
 ) {
     if query.is_none() {
         return;
     }
 
-    log!(Level::Info, "Player Died");
+    next_screen.set(Screen::HighScore);
 }

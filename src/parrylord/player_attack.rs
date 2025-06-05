@@ -4,9 +4,9 @@ use crate::parrylord::enemy_attack::EnemyAttack;
 use crate::parrylord::health::{Health, InvincibilityTimer};
 use crate::parrylord::player::Player;
 use crate::parrylord::ttl::Ttl;
-use crate::parrylord::{CollisionLayer, ParrylordSingleton};
+use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
-use crate::{AppSystems, PausableSystems, exponential_decay};
+use crate::{exponential_decay, AppSystems, ParrylordSingleton, PausableSystems};
 use avian2d::prelude::{
     AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
     Sensor,
@@ -34,6 +34,7 @@ pub struct PlayerAttackIndicator;
 impl PlayerAttackIndicator {
     pub fn bundle(player_assets: &PlayerAssets) -> impl Bundle {
         (
+            // StateScoped(Screen::Gameplay),
             Name::new("PlayerAttackIndicator"),
             Self,
             Sprite {
@@ -217,7 +218,7 @@ pub fn handle_parries(
     };
 
     let Some(&entity) = entities.first() else {
-        warn!("Some(&entity) = entities.get(0)");
+        // warn!("Some(&entity) = entities.get(0)");
         return;
     };
     let Ok(_) = change_components.get(entity) else {

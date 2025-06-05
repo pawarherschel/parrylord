@@ -1,6 +1,7 @@
 //! The game's menus and transitions between them.
 
 mod credits;
+mod high_score;
 mod main;
 mod pause;
 mod settings;
@@ -15,6 +16,7 @@ pub fn plugin(app: &mut App) {
         main::plugin,
         settings::plugin,
         pause::plugin,
+        high_score::plugin,
     ));
 }
 
@@ -27,4 +29,5 @@ pub enum Menu {
     Credits,
     Settings,
     Pause,
+    HighScore,
 }

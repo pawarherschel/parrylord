@@ -29,7 +29,7 @@ fn spawn_main_menu(mut commands: Commands) {
     ));
 }
 
-fn enter_loading_or_gameplay_screen(
+pub fn enter_loading_or_gameplay_screen(
     _: Trigger<Pointer<Click>>,
     resource_handles: Res<ResourceHandles>,
     mut next_screen: ResMut<NextState<Screen>>,

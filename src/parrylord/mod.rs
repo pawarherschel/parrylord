@@ -12,9 +12,9 @@ pub mod player;
 pub mod player_attack;
 pub mod ttl;
 
-pub fn plugin(app: &mut App) {
-    app.init_resource::<ParrylordSingleton>();
+// TODO: Convert all commands.entity to commands.get_entity.
 
+pub fn plugin(app: &mut App) {
     app.add_plugins((
         assets::plugin,
         attack::plugin,
@@ -40,12 +40,4 @@ pub enum CollisionLayer {
     PlayerParry,
     Enemy,
     EnemyProjectile,
-}
-
-#[derive(Resource, Clone, Reflect, Debug, Default)]
-#[reflect(Resource)]
-pub struct ParrylordSingleton {
-    pub enemies_killed: u32,
-    pub level: u32,
-    pub max_parried: u32,
 }

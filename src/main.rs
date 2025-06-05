@@ -15,8 +15,8 @@ mod screens;
 mod theme;
 mod zaphkiel;
 
-use avian2d::PhysicsPlugins;
 use avian2d::prelude::Gravity;
+use avian2d::PhysicsPlugins;
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
@@ -83,6 +83,8 @@ impl Plugin for AppPlugin {
 
         // Spawn the main camera.
         app.add_systems(Startup, spawn_camera);
+
+        app.init_resource::<ParrylordSingleton>();
     }
 }
 
@@ -121,4 +123,35 @@ fn spawn_camera(mut commands: Commands) {
         // Bloom::default(),               // 3. Enable bloom for the camera
         // DebandDither::Enabled,          // Optional: bloom causes gradients which cause banding
     ));
+}
+
+#[derive(Resource, Clone, Reflect, Debug)]
+#[reflect(Resource)]
+pub struct ParrylordSingleton {
+    pub enemies_killed: u32,
+    pub level: u32,
+    pub max_parried: u32,
+}
+
+impl Default for ParrylordSingleton {
+    fn default() -> Self {
+        Self {
+            enemies_killed: 0,
+            level: 1,
+            max_parried: 0,
+        }
+    }
+}
+
+impl ParrylordSingleton {
+    #[must_use]
+    pub const fn calculate_score(&self) -> u64 {
+        let &Self {
+            enemies_killed,
+            level,
+            max_parried,
+        } = self;
+
+        (level as u64 * enemies_killed as u64).pow(max_parried)
+    }
 }

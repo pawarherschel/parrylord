@@ -2,6 +2,7 @@ use crate::parrylord::assets::AttackAssets;
 use crate::parrylord::attack::Attack;
 use crate::parrylord::ttl::Ttl;
 use crate::parrylord::CollisionLayer;
+use crate::screens::Screen;
 use avian2d::prelude::{
     AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
     Sensor,
@@ -24,6 +25,7 @@ impl EnemyAttack {
         ttl: Ttl,
     ) -> impl Bundle {
         (
+            // StateScoped(Screen::Gameplay),
             Self,
             Attack(1),
             Transform::from_xyz(pos.x, pos.y, 3.0).with_scale(Vec3::splat(0.1)),
