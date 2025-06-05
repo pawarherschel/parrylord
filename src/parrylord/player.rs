@@ -1,15 +1,15 @@
-use crate::parylord::assets::PlayerAssets;
-use crate::parylord::dynamic_character_2d::CharacterControllerBundle;
-use crate::parylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
-use crate::parylord::player_attack::PlayerAttackIndicator;
-use crate::parylord::CollisionLayer;
+use crate::parrylord::CollisionLayer;
+use crate::parrylord::assets::PlayerAssets;
+use crate::parrylord::dynamic_character_2d::CharacterControllerBundle;
+use crate::parrylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
+use crate::parrylord::player_attack::PlayerAttackIndicator;
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
 use avian2d::parry::na::RealField;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Sensor};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use log::{log, Level};
+use log::{Level, log};
 use std::fmt::Debug;
 
 pub fn plugin(app: &mut App) {

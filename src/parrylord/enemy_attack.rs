@@ -1,7 +1,7 @@
-use crate::parylord::assets::AttackAssets;
-use crate::parylord::attack::Attack;
-use crate::parylord::ttl::Ttl;
-use crate::parylord::CollisionLayer;
+use crate::parrylord::assets::AttackAssets;
+use crate::parrylord::attack::Attack;
+use crate::parrylord::ttl::Ttl;
+use crate::parrylord::CollisionLayer;
 use avian2d::prelude::{
     AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
     Sensor,

@@ -1,8 +1,8 @@
 // https://github.com/Jondolf/avian/blob/main/crates/avian2d/examples/dynamic_character_2d/plugin.rs
 
-use crate::parylord::CollisionLayer;
+use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
-use crate::{exponential_decay, PausableSystems};
+use crate::{PausableSystems, exponential_decay};
 use avian2d::math::{AdjustPrecision, Scalar, Vector};
 use avian2d::prelude::*;
 use bevy::prelude::*;

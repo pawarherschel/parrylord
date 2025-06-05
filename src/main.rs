@@ -10,13 +10,13 @@ mod audio;
 #[cfg(feature = "dev")]
 mod dev_tools;
 mod menus;
-mod parylord;
+mod parrylord;
 mod screens;
 mod theme;
 mod zaphkiel;
 
-use avian2d::prelude::Gravity;
 use avian2d::PhysicsPlugins;
+use avian2d::prelude::Gravity;
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};
 
@@ -40,7 +40,7 @@ impl Plugin for AppPlugin {
                 })
                 .set(WindowPlugin {
                     primary_window: Window {
-                        title: "Parylord".to_string(),
+                        title: "Parrylord".to_string(),
                         fit_canvas_to_parent: true,
                         resolution: WindowResolution::new(1920.0, 1080.0),
                         ..default()
@@ -55,7 +55,7 @@ impl Plugin for AppPlugin {
             asset_tracking::plugin,
             audio::plugin,
             // demo::plugin,
-            parylord::plugin,
+            parrylord::plugin,
             #[cfg(feature = "dev")]
             dev_tools::plugin,
             menus::plugin,

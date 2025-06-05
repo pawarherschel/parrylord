@@ -1,9 +1,9 @@
-use crate::parylord::assets::{AttackAssets, EnemyAssets};
-use crate::parylord::enemy_attack::EnemyAttack;
-use crate::parylord::health::{DisplayHealth, Health, ZeroHealth};
-use crate::parylord::player::Player;
-use crate::parylord::ttl::Ttl;
-use crate::parylord::{CollisionLayer, ParrylordSingleton};
+use crate::parrylord::assets::{AttackAssets, EnemyAssets};
+use crate::parrylord::enemy_attack::EnemyAttack;
+use crate::parrylord::health::{DisplayHealth, Health, ZeroHealth};
+use crate::parrylord::player::Player;
+use crate::parrylord::ttl::Ttl;
+use crate::parrylord::{CollisionLayer, ParrylordSingleton};
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
 use avian2d::prelude::{

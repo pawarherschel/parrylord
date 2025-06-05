@@ -1,9 +1,9 @@
-use crate::parylord::assets::{LevelAssets, PlayerAssets};
-use crate::parylord::enemy::{Enemy, SpawnEnemy};
-use crate::parylord::player::Player;
-use crate::parylord::{CollisionLayer, ParrylordSingleton};
-use crate::screens::Screen;
 use crate::PausableSystems;
+use crate::parrylord::assets::{LevelAssets, PlayerAssets};
+use crate::parrylord::enemy::{Enemy, SpawnEnemy};
+use crate::parrylord::player::Player;
+use crate::parrylord::{CollisionLayer, ParrylordSingleton};
+use crate::screens::Screen;
 use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 

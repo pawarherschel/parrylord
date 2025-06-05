@@ -2,7 +2,7 @@
 
 use bevy::{input::common_conditions::input_just_pressed, prelude::*, ui::Val::*};
 
-use crate::{menus::Menu, parylord::level::spawn_level, screens::Screen, Pause};
+use crate::{Pause, menus::Menu, parrylord::level::spawn_level, screens::Screen};
 
 pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
