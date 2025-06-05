@@ -3,7 +3,7 @@ use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::health::{DisplayHealth, Health, ZeroHealth};
 use crate::parylord::player::Player;
 use crate::parylord::ttl::Ttl;
-use crate::parylord::CollisionLayer;
+use crate::parylord::{CollisionLayer, ParrylordSingleton};
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
 use avian2d::prelude::{
@@ -54,9 +54,14 @@ pub fn handle_spawn_enemy_events(
     mut events: EventReader<SpawnEnemy>,
     mut commands: Commands,
     enemy_assets: Res<EnemyAssets>,
+    singleton: Res<ParrylordSingleton>,
 ) {
     for _ in events.read() {
-        commands.spawn(Enemy::bundle(&enemy_assets, get_random_vec2_in_play_area()));
+        commands.spawn(Enemy::bundle(
+            &enemy_assets,
+            get_random_vec2_in_play_area(),
+            Enemy::BASE_HEALTH.pow(u32::from(singleton.level) - 1),
+        ));
     }
 }
 
@@ -92,7 +97,7 @@ impl EnemyIntent {
     }
 }
 
-const DEBUG_STATE_MACHINE: bool = true;
+const DEBUG_STATE_MACHINE: bool = false;
 
 #[tracing::instrument(skip_all)]
 pub fn write_enemy_intents(
@@ -285,18 +290,19 @@ pub fn tick_enemy_state_timer(mut timers: Query<&mut EnemyStateTimer>, time: Res
 }
 
 impl Enemy {
-    const SPEED: f32 = 100.0;
+    const SPEED: f32 = 300.0;
+    const BASE_HEALTH: u8 = 2;
 
     #[tracing::instrument()]
-    pub fn bundle(enemy_assets: &EnemyAssets, position: Vec2) -> impl Bundle {
+    pub fn bundle(enemy_assets: &EnemyAssets, position: Vec2, health: u8) -> impl Bundle {
         let mut rng = thread_rng();
         let pick = rng.gen_range(0..=EnemyAssets::MAX_ASSETS);
         (
             Self::default(),
-            Health(15),
+            Health(health),
             DisplayHealth::bundle(),
             EnemyStateTimer(Timer::from_seconds(2.0, TimerMode::Repeating)),
-            Transform::from_translation(position.extend(1.0)),
+            Transform::from_translation(position.extend(1.0)).with_scale(Vec3::splat(0.8)),
             Sprite {
                 image: match pick % EnemyAssets::MAX_ASSETS {
                     0 => enemy_assets.beige.clone(),
@@ -311,13 +317,12 @@ impl Enemy {
             },
             RigidBody::Dynamic,
             LinearVelocity::default(),
-            CollisionEventsEnabled,
             Collider::circle(64.0),
             CollisionLayers::new(
                 [CollisionLayer::Enemy],
                 [
+                    CollisionLayer::Enemy,
                     CollisionLayer::Walls,
-                    CollisionLayer::Player,
                     CollisionLayer::PlayerProjectile,
                     CollisionLayer::PlayerHurt,
                 ],
@@ -330,12 +335,15 @@ impl Enemy {
 pub fn handle_dead_enemies(
     dead_enemies: Query<Entity, (With<ZeroHealth>, With<Enemy>)>,
     mut commands: Commands,
+    mut singleton: ResMut<ParrylordSingleton>,
 ) {
     for entity in dead_enemies {
         let Ok(mut entity) = commands.get_entity(entity) else {
             continue;
         };
-        entity.despawn();
+        entity.try_despawn();
+
+        singleton.enemies_killed += 1;
     }
 }
 

@@ -1,13 +1,13 @@
 use crate::parylord::assets::{LevelAssets, PlayerAssets};
 use crate::parylord::enemy::{Enemy, SpawnEnemy};
 use crate::parylord::player::Player;
-use crate::parylord::{CollisionLayer, ParrylordLevel};
+use crate::parylord::{CollisionLayer, ParrylordSingleton};
 use crate::screens::Screen;
 use crate::PausableSystems;
 use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
 use bevy::prelude::*;
 
-pub(super) fn plugin(app: &mut App) {
+pub fn plugin(app: &mut App) {
     app.register_type::<Level>();
     app.register_type::<EnemySpawn>();
     app.register_type::<LevelAssets>();
@@ -60,17 +60,17 @@ pub struct EnemySpawn;
 fn new_level(
     enemies: Query<(), With<Enemy>>,
     mut spawn_enemy_event_writer: EventWriter<SpawnEnemy>,
-    mut level: ResMut<ParrylordLevel>,
+    mut singleton: ResMut<ParrylordSingleton>,
 ) {
     if !enemies.is_empty() {
         return;
     }
 
-    for _ in 0..level.0 {
+    for _ in 0..singleton.level {
         spawn_enemy_event_writer.write(SpawnEnemy);
     }
 
-    level.0 += 1;
+    singleton.level += 1;
 }
 
 //     let root = context.entity;

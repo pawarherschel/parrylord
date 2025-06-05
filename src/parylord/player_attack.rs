@@ -4,7 +4,7 @@ use crate::parylord::enemy_attack::EnemyAttack;
 use crate::parylord::health::{Health, InvincibilityTimer};
 use crate::parylord::player::Player;
 use crate::parylord::ttl::Ttl;
-use crate::parylord::CollisionLayer;
+use crate::parylord::{CollisionLayer, ParrylordSingleton};
 use crate::screens::Screen;
 use crate::{exponential_decay, AppSystems, PausableSystems};
 use avian2d::prelude::{
@@ -210,34 +210,36 @@ pub fn handle_parries(
     attack_assets: Res<AttackAssets>,
     window: Single<&Window>,
     camera: Single<(&Camera, &GlobalTransform)>,
+    mut singleton: ResMut<ParrylordSingleton>,
 ) {
     let Some(entities) = entities else {
         return;
     };
 
-    let number_of_entities = entities.len().clamp(0, AttackAssets::MAX as usize - 1); //remove clamp
     let Some(&entity) = entities.first() else {
         warn!("Some(&entity) = entities.get(0)");
         return;
     };
-    let Ok((velocity, _transform, ttl)) = change_components.get(entity) else {
+    let Ok(_) = change_components.get(entity) else {
         warn!("Entity {entity} not in change_components");
         return;
     };
 
-    let pos = entities
+    let Some((sum_speed, sum_pos, sum_ttl, total)) = entities
         .iter()
         .flat_map(|&x| change_components.get(x))
-        .map(|(_, x, _)| x)
-        .map(|x| x.translation)
-        .map(|x| x.truncate())
-        .collect::<Vec<_>>();
-
-    let Some(sum) = pos.iter().copied().reduce(|acc, x| acc + x) else {
+        .map(|(x, y, z)| (x.length(), y.translation, z.0.remaining_secs()))
+        .map(|(x, y, z)| (x, y.truncate(), z, 1u32))
+        .reduce(|(a, b, c, d), (x, y, z, w)| (a + x, b + y, c + z, d + w))
+    else {
         warn!("Some(&sum) = pos.iter().reduce(|acc, x| acc + x)");
         return;
     };
-    let total = pos.len() as f32;
+
+    singleton.max_parried = singleton.max_parried.max(total);
+
+    #[allow(clippy::cast_precision_loss)]
+    let total_f32 = total as f32;
 
     let window = *window;
     let Some(mouse) = window.cursor_position() else {
@@ -253,14 +255,15 @@ pub fn handle_parries(
         camera_transform,
     );
     let angle = Vec2::from_angle(angle);
-    let speed = velocity.0.length();
 
-    let pos = sum / total;
-    let velocity = LinearVelocity(angle * speed); // average the speed
-    let ttl = Ttl::new(ttl.0.remaining_secs() + 1.0);
+    let pos = sum_pos / total_f32;
+    let velocity = LinearVelocity(angle * sum_speed / total_f32);
+    let ttl = Ttl::new((sum_ttl / total_f32) + 1.0);
+
+    let power = 2u8.checked_pow(total - 1).unwrap_or(u8::MAX);
 
     commands.spawn(PlayerAttack::bundle(
-        number_of_entities as u8, //remove clamp
+        power,
         &attack_assets,
         pos,
         velocity,
@@ -271,7 +274,7 @@ pub fn handle_parries(
         let Ok(mut entity) = commands.get_entity(entity) else {
             continue;
         };
-        entity.despawn();
+        entity.try_despawn();
     }
 }
 
@@ -286,7 +289,7 @@ pub fn deal_damage(
                 continue 'outer;
             };
 
-            health.0 -= attack.0 as i8;
+            health.0 = health.0.saturating_sub(attack.0);
 
             commands
                 .entity(entity)
@@ -298,7 +301,7 @@ pub fn deal_damage(
             let Ok(mut attack_entity) = commands.get_entity(attack_entity) else {
                 continue;
             };
-            attack_entity.despawn();
+            attack_entity.try_despawn();
         }
     }
 }

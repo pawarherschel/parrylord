@@ -6,7 +6,7 @@ use bevy::{
 
 use crate::{asset_tracking::LoadResource, audio::music, menus::Menu, theme::prelude::*};
 
-pub(super) fn plugin(app: &mut App) {
+pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Menu::Credits), spawn_credits_menu);
     app.add_systems(
         Update,

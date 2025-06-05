@@ -71,9 +71,7 @@ impl PlayerSprite {
     fn flip_x(&self) -> bool {
         match self {
             Self::Front(_) => false,
-            Self::Walk(dir, _) | Self::Stand(dir) => {
-                !dir.is_sign_positive()
-            }
+            Self::Walk(dir, _) | Self::Stand(dir) => !dir.is_sign_positive(),
         }
     }
 
@@ -248,13 +246,16 @@ fn hurt(
                 continue;
             };
 
-            entity.despawn();
+            entity.try_despawn();
         }
     }
 }
 
 #[tracing::instrument(skip_all)]
-fn handle_player_death(query: Option<Single<(), (With<Player>, With<ZeroHealth>)>>) {
+fn handle_player_death(
+    query: Option<Single<(), (With<Player>, With<ZeroHealth>)>>,
+    next: ResMut<NextState<Screen>>,
+) {
     if query.is_none() {
         return;
     }

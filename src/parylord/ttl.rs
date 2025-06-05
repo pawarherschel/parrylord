@@ -18,7 +18,7 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-pub struct Ttl(pub(crate) Timer);
+pub struct Ttl(pub Timer);
 
 impl Ttl {
     pub fn new(secs: f32) -> Self {
@@ -45,6 +45,6 @@ pub fn handle_done_ttl_timers(In(timers): In<Vec<Entity>>, mut commands: Command
         let Ok(mut entity) = commands.get_entity(timer) else {
             continue;
         };
-        entity.despawn();
+        entity.try_despawn();
     }
 }

@@ -13,7 +13,7 @@ pub mod player_attack;
 pub mod ttl;
 
 pub fn plugin(app: &mut App) {
-    app.init_resource::<ParrylordLevel>();
+    app.init_resource::<ParrylordSingleton>();
 
     app.add_plugins((
         assets::plugin,
@@ -44,4 +44,8 @@ pub enum CollisionLayer {
 
 #[derive(Resource, Clone, Reflect, Debug, Default)]
 #[reflect(Resource)]
-pub struct ParrylordLevel(u8);
+pub struct ParrylordSingleton {
+    pub enemies_killed: u32,
+    pub level: u32,
+    pub max_parried: u32,
+}

@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{asset_tracking::LoadResource, audio::sound_effect};
 
-pub(super) fn plugin(app: &mut App) {
+pub fn plugin(app: &mut App) {
     app.register_type::<InteractionPalette>();
     app.add_systems(Update, apply_interaction_palette);
 
