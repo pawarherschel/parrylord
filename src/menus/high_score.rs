@@ -1,23 +1,31 @@
 use crate::menus::main::enter_loading_or_gameplay_screen;
 use crate::menus::Menu;
+use crate::theme::palette::LABEL_TEXT;
 use crate::theme::widget;
-use crate::ParrylordSingleton;
-use bevy::app::App;
-use bevy::asset::AssetContainer;
-use bevy::ecs::children;
-use bevy::prelude::SpawnRelated;
-use bevy::prelude::{Commands, GlobalZIndex, OnEnter, Res, StateScoped};
-use log::{error, info, warn};
-use serde::Deserialize;
-use std::sync::mpsc;
-use std::sync::mpsc::RecvError;
-use std::thread::spawn;
+use crate::zaphkiel::has_bad_word;
+use crate::{HighScore, HighScores, ParrylordSingleton, CF_WORKER_URL};
+use bevy::core_pipeline::smaa::SmaaPreset::High;
+use bevy::prelude::*;
+use bevy_mod_reqwest::{BevyReqwest, JsonResponse, ReqwestErrorEvent, ReqwestResponseEvent};
 
 pub fn plugin(app: &mut App) {
+    app.init_resource::<NameField>();
     app.add_systems(OnEnter(Menu::HighScore), spawn_high_score);
+    // app.add_systems(
+    //     Update,
+    //     spawn_high_score
+    //         .run_if(resource_changed::<NameField>)
+    //         .run_if(in_state(Menu::HighScore)),
+    // );
+    app.add_systems(Update, update_name.run_if(in_state(Menu::HighScore)));
 }
 
-fn spawn_high_score(mut commands: Commands, singleton: Res<ParrylordSingleton>) {
+fn spawn_high_score(
+    mut commands: Commands,
+    singleton: Res<ParrylordSingleton>,
+    scores: Res<HighScores>,
+    name: Res<NameField>,
+) {
     let ParrylordSingleton {
         enemies_killed,
         level,
@@ -25,11 +33,13 @@ fn spawn_high_score(mut commands: Commands, singleton: Res<ParrylordSingleton>) 
     } = *singleton;
     let score = singleton.calculate_score();
 
-    let scores = get_high_scores();
+    let scores = scores.0.clone();
+
+    info!(?scores);
+
+    let name = name.0.clone();
 
     let root = commands.spawn(widget::ui_root("High Score")).id();
-
-    // TODO: wasm crashes on entering this screen for some reason.
 
     let Ok(mut root) = commands.get_entity(root) else {
         warn!("Ok(mut root) = commands.get_entity(root): {root:?}");
@@ -40,69 +50,128 @@ fn spawn_high_score(mut commands: Commands, singleton: Res<ParrylordSingleton>) 
         GlobalZIndex(2),
         StateScoped(Menu::HighScore),
         children![
+            (
+                widget::label("Name: "),
+                children![(
+                    TextSpan::new("<Start Typing>"),
+                    TextThing,
+                    TextFont::from_font_size(24.0),
+                    TextColor(LABEL_TEXT),
+                )]
+            ),
             widget::header(format!("Score: {score}")),
             widget::label(format!("Enemies Killed: {enemies_killed}")),
             widget::label(format!("Level Reached: {level}")),
             widget::label(format!("Max Projectiles Parried: {max_parried}")),
+            widget::button("Submit Score", submit_score),
             widget::button("Play Again", enter_loading_or_gameplay_screen),
         ],
     ));
 
     root.with_children(|children_spawner| {
-        for (pos, HighScore { name, score }) in scores.iter().enumerate() {
+        for (pos, HighScore { name, score }) in
+            (0..10).map(|idx| (idx + 1, scores.get(idx).cloned().unwrap_or_default()))
+        {
             children_spawner.spawn(widget::label(format!("{pos}: {name} -> {score}")));
         }
+
+        children_spawner.spawn(widget::button("Main Menu", open_main_menu));
     });
 }
 
-const URL: &str = "https://parrylord-high-score-worker.pawarherschel.workers.dev/";
+fn open_main_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {
+    next_menu.set(Menu::Main);
+}
 
-fn get_high_scores() -> Vec<HighScore> {
-    let request = ehttp::Request::get(URL);
+#[derive(Component)]
+struct TextThing;
+#[derive(Resource, Default, Debug)]
+struct NameField(String);
 
-    let (send, recv) = mpsc::channel();
+fn submit_score(
+    _: Trigger<Pointer<Click>>,
+    singleton: Res<ParrylordSingleton>,
+    mut name_field: ResMut<NameField>,
+    mut next_menu: ResMut<NextState<Menu>>,
+    mut client: BevyReqwest,
+) {
+    if has_bad_word(&name_field.0) {
+        name_field.0 = String::from("BAD WORD DETECTED");
+        return;
+    }
 
-    ehttp::fetch(request, move |result: ehttp::Result<ehttp::Response>| {
-        let Ok(res) = result else {
-            error!("fetch request failed");
-            send.send(None).unwrap();
-            return;
-        };
-        info!("status code: {}", res.status);
-        if res.status == 404 {
-            error!("got: {:?}", res.text());
-            send.send(None).unwrap();
-            return;
-        }
+    let score = singleton.calculate_score();
 
-        let Ok(json) = res.json::<HighScores>() else {
-            error!("unable to get json");
-            send.send(None).unwrap();
-            return;
-        };
+    let reqwest_request = client
+        .post(CF_WORKER_URL)
+        .json(&HighScore {
+            name: name_field.0.clone(),
+            score,
+        })
+        .build()
+        .unwrap();
 
-        let Err(x) = send.send(Some(json)) else {
-            send.send(None).unwrap();
-            return;
-        };
-        error!("Unable to send data: {x:?}");
-        send.send(None).unwrap();
-    });
+    client
+        .send(reqwest_request)
+        .on_error(|trigger: Trigger<ReqwestErrorEvent>| {
+            let e = &trigger.event().0;
+            error!(?e);
+        });
 
-    match recv.recv() {
-        Ok(Some(x)) => x.0,
-        x => {
-            error!("{x:?}");
-            Vec::new()
+    next_menu.set(Menu::Main);
+}
+
+fn update_name(
+    key: Res<ButtonInput<KeyCode>>,
+    mut name_field: ResMut<NameField>,
+    mut text_thing: Single<&mut TextSpan, With<TextThing>>,
+) {
+    for &key in key.get_just_pressed() {
+        if key == KeyCode::Backspace {
+            let new_len = name_field.0.len().saturating_sub(1);
+            name_field.0.truncate(new_len);
+        } else {
+            name_field.0.push(match key {
+                KeyCode::Digit0 => '0',
+                KeyCode::Digit1 => '1',
+                KeyCode::Digit2 => '2',
+                KeyCode::Digit3 => '3',
+                KeyCode::Digit4 => '4',
+                KeyCode::Digit5 => '5',
+                KeyCode::Digit6 => '6',
+                KeyCode::Digit7 => '7',
+                KeyCode::Digit8 => '8',
+                KeyCode::Digit9 => '9',
+                KeyCode::KeyA => 'A',
+                KeyCode::KeyB => 'B',
+                KeyCode::KeyC => 'C',
+                KeyCode::KeyD => 'D',
+                KeyCode::KeyE => 'E',
+                KeyCode::KeyF => 'F',
+                KeyCode::KeyG => 'G',
+                KeyCode::KeyH => 'H',
+                KeyCode::KeyI => 'I',
+                KeyCode::KeyJ => 'J',
+                KeyCode::KeyK => 'K',
+                KeyCode::KeyL => 'L',
+                KeyCode::KeyM => 'M',
+                KeyCode::KeyN => 'N',
+                KeyCode::KeyO => 'O',
+                KeyCode::KeyP => 'P',
+                KeyCode::KeyQ => 'Q',
+                KeyCode::KeyR => 'R',
+                KeyCode::KeyS => 'S',
+                KeyCode::KeyT => 'T',
+                KeyCode::KeyU => 'U',
+                KeyCode::KeyV => 'V',
+                KeyCode::KeyW => 'W',
+                KeyCode::KeyX => 'X',
+                KeyCode::KeyY => 'Y',
+                KeyCode::KeyZ => 'Z',
+                _ => continue,
+            });
         }
     }
-}
 
-#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Default)]
-struct HighScore {
-    name: String,
-    score: u64,
+    (***text_thing).clone_from(&name_field.0);
 }
-
-#[derive(serde::Deserialize, Debug, Clone, Default)]
-struct HighScores(Vec<HighScore>);

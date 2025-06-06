@@ -1,7 +1,7 @@
+use crate::parrylord::CollisionLayer;
 use crate::parrylord::assets::{LevelAssets, PlayerAssets};
 use crate::parrylord::enemy::{Enemy, SpawnEnemy};
 use crate::parrylord::player::Player;
-use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{ParrylordSingleton, PausableSystems};
 use avian2d::prelude::{Collider, CollisionLayers, RigidBody};
@@ -9,7 +9,7 @@ use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
     app.register_type::<Level>();
-    app.register_type::<EnemySpawn>();
+    app.register_type::<EnemySpawnPositionInSceneTree>();
     app.register_type::<LevelAssets>();
     app.register_type::<LevelBackground>();
     app.register_type::<Walls>();
@@ -38,7 +38,7 @@ impl Level {
             children![
                 Player::bundle(player_assets),
                 LevelBackground::bundle(level_assets),
-                EnemySpawn,
+                EnemySpawnPositionInSceneTree,
             ],
         )
     }
@@ -57,7 +57,7 @@ pub fn spawn_level(
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-pub struct EnemySpawn;
+pub struct EnemySpawnPositionInSceneTree;
 
 fn new_level(
     enemies: Query<(), With<Enemy>>,
@@ -67,6 +67,8 @@ fn new_level(
     if !enemies.is_empty() {
         return;
     }
+
+    // info!(?singleton);
 
     for _ in 0..singleton.level {
         spawn_enemy_event_writer.write(SpawnEnemy);

@@ -12,8 +12,6 @@ pub mod player;
 pub mod player_attack;
 pub mod ttl;
 
-// TODO: Convert all commands.entity to commands.get_entity.
-
 pub fn plugin(app: &mut App) {
     app.add_plugins((
         assets::plugin,

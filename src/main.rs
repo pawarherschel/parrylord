@@ -17,8 +17,13 @@ mod zaphkiel;
 
 use avian2d::prelude::Gravity;
 use avian2d::PhysicsPlugins;
+use bevy::time::common_conditions::on_timer;
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};
+use bevy_mod_reqwest::{
+    BevyReqwest, JsonResponse, ReqwestErrorEvent, ReqwestPlugin, ReqwestResponseEvent,
+};
+use std::time::Duration;
 
 fn main() -> AppExit {
     App::new().add_plugins(AppPlugin).run()
@@ -61,6 +66,7 @@ impl Plugin for AppPlugin {
             menus::plugin,
             screens::plugin,
             theme::plugin,
+            ReqwestPlugin::default(),
         ));
 
         app.add_plugins(PhysicsPlugins::default())
@@ -85,6 +91,12 @@ impl Plugin for AppPlugin {
         app.add_systems(Startup, spawn_camera);
 
         app.init_resource::<ParrylordSingleton>();
+        app.init_resource::<HighScores>();
+
+        app.add_systems(
+            Update,
+            get_high_scores.run_if(on_timer(Duration::from_secs_f32(10.0))),
+        );
     }
 }
 
@@ -154,4 +166,33 @@ impl ParrylordSingleton {
 
         (level as u64 * enemies_killed as u64).pow(max_parried)
     }
+}
+
+#[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Default)]
+pub struct HighScore {
+    pub name: String,
+    pub score: u64,
+}
+
+#[derive(serde::Deserialize, Debug, Clone, Default, Resource)]
+pub struct HighScores(pub Vec<HighScore>);
+
+pub const CF_WORKER_URL: &str = "https://parrylord-high-score-worker.pawarherschel.workers.dev/";
+
+fn get_high_scores(mut client: BevyReqwest) {
+    let reqwest_request = client.get(CF_WORKER_URL).build().unwrap();
+
+    client
+        .send(reqwest_request)
+        .on_json_response(
+            |trigger: Trigger<JsonResponse<HighScores>>, mut high_scores: ResMut<HighScores>| {
+                let data = trigger.0.clone();
+
+                high_scores.0 = data.0;
+            },
+        )
+        .on_error(|trigger: Trigger<ReqwestErrorEvent>| {
+            let e = &trigger.event().0;
+            error!(?e);
+        });
 }

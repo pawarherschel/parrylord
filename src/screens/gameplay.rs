@@ -1,9 +1,8 @@
 //! The screen state for the main gameplay.
 
+use crate::{menus::Menu, parrylord::level::spawn_level, screens::Screen, Pause};
+use avian2d::prelude::{Physics, PhysicsTime};
 use bevy::{input::common_conditions::input_just_pressed, prelude::*, ui::Val::*};
-
-use crate::{Pause, menus::Menu, parrylord::level::spawn_level, screens::Screen};
-
 pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
 
@@ -30,12 +29,14 @@ pub fn plugin(app: &mut App) {
     );
 }
 
-fn unpause(mut next_pause: ResMut<NextState<Pause>>) {
+fn unpause(mut next_pause: ResMut<NextState<Pause>>, mut physics: ResMut<Time<Physics>>) {
     next_pause.set(Pause(false));
+    physics.unpause();
 }
 
-fn pause(mut next_pause: ResMut<NextState<Pause>>) {
+fn pause(mut next_pause: ResMut<NextState<Pause>>, mut physics: ResMut<Time<Physics>>) {
     next_pause.set(Pause(true));
+    physics.pause();
 }
 
 fn spawn_pause_overlay(mut commands: Commands) {

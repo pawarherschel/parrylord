@@ -1,5 +1,7 @@
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
+use bevy::asset::io::ErasedAssetWriter;
+use bevy::ecs::system::entity_command::remove;
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -105,7 +107,10 @@ pub fn despawn_done_invincibility_timers(
     for (timer, entity, mut vis) in &mut timers {
         if timer.0.just_finished() {
             *vis = Visibility::Inherited;
-            commands.entity(entity).remove::<InvincibilityTimer>();
+            let Ok(mut entity) = commands.get_entity(entity) else {
+                continue;
+            };
+            entity.remove::<InvincibilityTimer>();
         }
     }
 }

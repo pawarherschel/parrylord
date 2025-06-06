@@ -25,7 +25,7 @@ impl EnemyAttack {
         ttl: Ttl,
     ) -> impl Bundle {
         (
-            // StateScoped(Screen::Gameplay),
+            StateScoped(Screen::Gameplay),
             Self,
             Attack(1),
             Transform::from_xyz(pos.x, pos.y, 3.0).with_scale(Vec3::splat(0.1)),

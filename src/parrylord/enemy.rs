@@ -1,7 +1,7 @@
 use crate::parrylord::assets::{AttackAssets, EnemyAssets};
 use crate::parrylord::enemy_attack::EnemyAttack;
 use crate::parrylord::health::{DisplayHealth, Health, ZeroHealth};
-use crate::parrylord::level::EnemySpawn;
+use crate::parrylord::level::EnemySpawnPositionInSceneTree;
 use crate::parrylord::player::Player;
 use crate::parrylord::ttl::Ttl;
 use crate::parrylord::CollisionLayer;
@@ -9,6 +9,8 @@ use crate::screens::Screen;
 use crate::{AppSystems, ParrylordSingleton, PausableSystems};
 use avian2d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::asset::AssetContainer;
+use bevy::ecs::error::error;
+use bevy::ecs::system::entity_command::insert;
 use bevy::prelude::*;
 use log::{log, Level};
 use rand::{random, thread_rng, Rng};
@@ -53,12 +55,12 @@ pub struct SpawnEnemy;
 pub fn handle_spawn_enemy_events(
     mut events: EventReader<SpawnEnemy>,
     mut commands: Commands,
-    spawn: Single<Entity, With<EnemySpawn>>,
+    spawn: Single<Entity, With<EnemySpawnPositionInSceneTree>>,
     enemy_assets: Res<EnemyAssets>,
     singleton: Res<ParrylordSingleton>,
 ) {
     for _ in events.read() {
-        commands.entity(*spawn).insert(Enemy::bundle(
+        commands.spawn(Enemy::bundle(
             &enemy_assets,
             get_random_vec2_in_play_area(),
             Enemy::BASE_HEALTH.pow(singleton.level - 1),
@@ -113,6 +115,7 @@ pub fn write_enemy_intents(
     )>,
     player: Single<&GlobalTransform, With<Player>>,
     mut intent_writer: EventWriter<EnemyIntent>,
+    singleton: Res<ParrylordSingleton>,
 ) {
     for (global_transform, mut transform, mut velocity, mut spin, timer, enemy, entity) in
         &mut enemies
@@ -122,6 +125,8 @@ pub fn write_enemy_intents(
         let timer_expired = timer.0.just_finished();
         let mut thread_rng = thread_rng();
         let offset = (random::<Vec2>() * 2.0 - Vec2::splat(1.0)) * 30.0;
+        let no_of_attacks =
+            u8::try_from(thread_rng.gen_range(1..=(4 + singleton.level))).unwrap_or(u8::MAX);
 
         let id = match state {
             EnemyState::Start => {
@@ -130,7 +135,6 @@ pub fn write_enemy_intents(
                 *spin = AngularVelocity::ZERO;
 
                 let travel = thread_rng.gen_bool(0.5);
-
                 if travel {
                     let to_player = thread_rng.gen_bool(0.5);
                     let pos = if to_player {
@@ -148,8 +152,6 @@ pub fn write_enemy_intents(
                         get_random_vec2_in_play_area() + offset
                     };
 
-                    let no_of_attacks = thread_rng.gen_range(1..=8);
-
                     intent_writer.write(EnemyIntent::Attack(entity, pos, no_of_attacks))
                 }
             }
@@ -165,8 +167,6 @@ pub fn write_enemy_intents(
                     } else {
                         get_random_vec2_in_play_area() + offset
                     };
-
-                    let no_of_attacks = thread_rng.gen_range(1..=8);
 
                     intent_writer.write(EnemyIntent::Attack(entity, pos, no_of_attacks))
                 } else {
@@ -207,7 +207,7 @@ pub fn handle_enemy_intents(
     mut commands: Commands,
     // player: Single<&GlobalTransform, With<Player>>,
     attack_assets: Res<AttackAssets>,
-    spawn: Single<Entity, With<EnemySpawn>>,
+    spawn: Single<Entity, With<EnemySpawnPositionInSceneTree>>,
     // time: Res<Time>,
 ) -> Result {
     if intents.is_empty() {
@@ -259,24 +259,21 @@ pub fn handle_enemy_intents(
             EnemyIntent::Attack(_, pos, n) => {
                 let my_pos = global_transform.translation().truncate();
                 let velocity = LinearVelocity(
-                    (pos - my_pos).normalize() * 500.0 + (((random::<f32>() * 2.0) - 1.0) * 200.0),
+                    (pos - my_pos).normalize() * 500.0
+                        + (random::<f32>().mul_add(2.0, -1.0) * 150.0),
                 );
-                commands
-                    .get_entity(*spawn)
-                    .map_or(EnemyState::Idling, |mut spawn| {
-                        spawn.insert(EnemyAttack::bundle(
-                            &attack_assets,
-                            my_pos,
-                            velocity,
-                            Ttl::new(random::<f32>() * 3.0),
-                        ));
+                commands.spawn(EnemyAttack::bundle(
+                    &attack_assets,
+                    my_pos,
+                    velocity,
+                    Ttl::new(random::<f32>().mul_add(3.0, 0.25)),
+                ));
 
-                        if n > 0 {
-                            EnemyState::Attacking(n - 1)
-                        } else {
-                            EnemyState::Idling
-                        }
-                    })
+                if n > 0 {
+                    EnemyState::Attacking(n - 1)
+                } else {
+                    EnemyState::Idling
+                }
             }
             EnemyIntent::GoToStart(_) => EnemyState::Start,
         }
@@ -305,7 +302,7 @@ impl Enemy {
         let mut rng = thread_rng();
         let pick = rng.gen_range(0..=EnemyAssets::MAX_ASSETS);
         (
-            // StateScoped(Screen::Gameplay),
+            StateScoped(Screen::Gameplay),
             Self::default(),
             Health(health),
             DisplayHealth::bundle(),
@@ -352,6 +349,8 @@ pub fn handle_dead_enemies(
         entity.try_despawn();
 
         singleton.enemies_killed += 1;
+
+        // info!(?singleton);
     }
 }
 
