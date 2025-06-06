@@ -164,6 +164,7 @@ fn update_name(
                 KeyCode::KeyX => 'X',
                 KeyCode::KeyY => 'Y',
                 KeyCode::KeyZ => 'Z',
+                KeyCode::Space => ' ',
                 _ => continue,
             });
         }
