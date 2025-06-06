@@ -16,7 +16,10 @@ macro_rules! exponential_decay {
 pub fn has_bad_word(s: &str) -> bool {
     let s_ = s.to_lowercase();
     let s = &*s_;
-    BAD_WORDS.iter().any(|x| x.contains(s) || s.contains(x))
+    BAD_WORDS.iter().any(|x| {
+        s.split_whitespace().any(|it| x.contains(it))
+            || s.split_whitespace().any(|it| it.contains(x))
+    })
 }
 
 // taken from https://gist.github.com/techpulsetoday/8492ebf547a890af8289d0939ffbda0a
