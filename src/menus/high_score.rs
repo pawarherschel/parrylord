@@ -4,9 +4,8 @@ use crate::theme::palette::LABEL_TEXT;
 use crate::theme::widget;
 use crate::zaphkiel::has_bad_word;
 use crate::{HighScore, HighScores, ParrylordSingleton, CF_WORKER_URL};
-use bevy::core_pipeline::smaa::SmaaPreset::High;
 use bevy::prelude::*;
-use bevy_mod_reqwest::{BevyReqwest, JsonResponse, ReqwestErrorEvent, ReqwestResponseEvent};
+use bevy_mod_reqwest::{BevyReqwest, ReqwestErrorEvent};
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<NameField>();
@@ -24,7 +23,6 @@ fn spawn_high_score(
     mut commands: Commands,
     singleton: Res<ParrylordSingleton>,
     scores: Res<HighScores>,
-    name: Res<NameField>,
 ) {
     let ParrylordSingleton {
         enemies_killed,
@@ -36,8 +34,6 @@ fn spawn_high_score(
     let scores = scores.0.clone();
 
     info!(?scores);
-
-    let name = name.0.clone();
 
     let root = commands.spawn(widget::ui_root("High Score")).id();
 

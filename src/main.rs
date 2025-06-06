@@ -15,14 +15,12 @@ mod screens;
 mod theme;
 mod zaphkiel;
 
-use avian2d::prelude::Gravity;
 use avian2d::PhysicsPlugins;
+use avian2d::prelude::Gravity;
 use bevy::time::common_conditions::on_timer;
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};
-use bevy_mod_reqwest::{
-    BevyReqwest, JsonResponse, ReqwestErrorEvent, ReqwestPlugin, ReqwestResponseEvent,
-};
+use bevy_mod_reqwest::{BevyReqwest, JsonResponse, ReqwestErrorEvent, ReqwestPlugin};
 use std::time::Duration;
 
 fn main() -> AppExit {

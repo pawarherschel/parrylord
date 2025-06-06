@@ -1,4 +1,3 @@
-use crate::menus::Menu;
 use crate::parrylord::assets::PlayerAssets;
 use crate::parrylord::dynamic_character_2d::CharacterControllerBundle;
 use crate::parrylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
@@ -10,7 +9,6 @@ use avian2d::parry::na::RealField;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Sensor};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
-use log::{log, Level};
 use std::fmt::Debug;
 
 pub fn plugin(app: &mut App) {
@@ -94,7 +92,7 @@ impl PlayerSprite {
             Self::Walk(_, 1) => walk2,
             Self::Stand(_) => stand,
 
-            _what => unreachable!("get_sprite: {_what:?}"),
+            what => unreachable!("get_sprite: {what:?}"),
         }
     }
 
@@ -110,10 +108,10 @@ impl PlayerSprite {
 
 #[tracing::instrument(skip_all)]
 pub fn walk_animation(player: Single<(&mut PlayerSprite, &LinearVelocity), With<Player>>) {
-    let (mut player_sprite, velocity) = player.into_inner();
-
     const MINIMUM_SPEED: f32 = 1.0;
     const MINIMUM_X_SPEED: f32 = 20.0;
+
+    let (mut player_sprite, velocity) = player.into_inner();
 
     let frame_number = match *player_sprite {
         PlayerSprite::Front(n) | PlayerSprite::Walk(_, n) => n,
@@ -242,7 +240,7 @@ fn hurt(
                 TimerMode::Once,
             )));
 
-        for &attack_entity in collisions.0.iter() {
+        for &attack_entity in &collisions.0 {
             let Ok(mut entity) = commands.get_entity(attack_entity) else {
                 continue;
             };

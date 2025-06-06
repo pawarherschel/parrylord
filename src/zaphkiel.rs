@@ -20,7 +20,7 @@ pub fn has_bad_word(s: &str) -> bool {
 }
 
 // taken from https://gist.github.com/techpulsetoday/8492ebf547a890af8289d0939ffbda0a
-const BAD_WORDS: [&str; 1610] = [
+static BAD_WORDS: [&str; 1610] = [
     "2 girls 1 cup",
     "2g1c",
     "4r5e",

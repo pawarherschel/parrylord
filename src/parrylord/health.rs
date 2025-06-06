@@ -1,7 +1,5 @@
 use crate::screens::Screen;
 use crate::{AppSystems, PausableSystems};
-use bevy::asset::io::ErasedAssetWriter;
-use bevy::ecs::system::entity_command::remove;
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -64,7 +62,7 @@ pub struct InvincibilityTimer(pub Timer);
 pub fn check_health(healths: Query<(&Health, Entity)>) -> Vec<Entity> {
     healths
         .iter()
-        .filter(|(health, ..)| health.0 <= 0)
+        .filter(|(health, ..)| health.0 == 0)
         .map(|(_, entity)| entity)
         .collect()
 }

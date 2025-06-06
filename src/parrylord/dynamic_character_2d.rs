@@ -2,7 +2,7 @@
 
 use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
-use crate::{exponential_decay, PausableSystems};
+use crate::{PausableSystems, exponential_decay};
 use avian2d::math::{AdjustPrecision, Scalar, Vector};
 use avian2d::prelude::*;
 use bevy::prelude::*;

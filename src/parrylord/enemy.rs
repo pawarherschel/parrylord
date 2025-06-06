@@ -1,19 +1,14 @@
 use crate::parrylord::assets::{AttackAssets, EnemyAssets};
 use crate::parrylord::enemy_attack::EnemyAttack;
 use crate::parrylord::health::{DisplayHealth, Health, ZeroHealth};
-use crate::parrylord::level::EnemySpawnPositionInSceneTree;
 use crate::parrylord::player::Player;
 use crate::parrylord::ttl::Ttl;
 use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
 use crate::{AppSystems, ParrylordSingleton, PausableSystems};
 use avian2d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
-use bevy::asset::AssetContainer;
-use bevy::ecs::error::error;
-use bevy::ecs::system::entity_command::insert;
 use bevy::prelude::*;
-use log::{log, Level};
-use rand::{random, thread_rng, Rng};
+use rand::{random, Rng};
 
 pub fn plugin(app: &mut App) {
     app.register_type::<Enemy>();
@@ -49,13 +44,12 @@ pub fn plugin(app: &mut App) {
 #[reflect(Component)]
 pub struct Enemy(EnemyState);
 
-#[derive(Event, Debug, Clone, Copy, PartialEq, Default, Reflect)]
+#[derive(Event, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 pub struct SpawnEnemy;
 
 pub fn handle_spawn_enemy_events(
     mut events: EventReader<SpawnEnemy>,
     mut commands: Commands,
-    spawn: Single<Entity, With<EnemySpawnPositionInSceneTree>>,
     enemy_assets: Res<EnemyAssets>,
     singleton: Res<ParrylordSingleton>,
 ) {
@@ -100,8 +94,6 @@ impl EnemyIntent {
     }
 }
 
-const DEBUG_STATE_MACHINE: bool = false;
-
 #[tracing::instrument(skip_all)]
 pub fn write_enemy_intents(
     mut enemies: Query<(
@@ -123,7 +115,7 @@ pub fn write_enemy_intents(
         let Enemy(state) = *enemy;
         let player_pos = player.translation().truncate();
         let timer_expired = timer.0.just_finished();
-        let mut thread_rng = thread_rng();
+        let mut thread_rng = rand::thread_rng();
         let offset = (random::<Vec2>() * 2.0 - Vec2::splat(1.0)) * 30.0;
         let no_of_attacks =
             u8::try_from(thread_rng.gen_range(1..=(4 + singleton.level))).unwrap_or(u8::MAX);
@@ -205,15 +197,9 @@ pub fn handle_enemy_intents(
         (&GlobalTransform, &mut LinearVelocity, &mut EnemyStateTimer),
     )>,
     mut commands: Commands,
-    // player: Single<&GlobalTransform, With<Player>>,
     attack_assets: Res<AttackAssets>,
-    spawn: Single<Entity, With<EnemySpawnPositionInSceneTree>>,
-    // time: Res<Time>,
 ) -> Result {
     if intents.is_empty() {
-        if DEBUG_STATE_MACHINE {
-            log!(Level::Info, "intents.is_empty(), are all enemies dead?");
-        }
         return Ok(());
     }
 
@@ -236,9 +222,6 @@ pub fn handle_enemy_intents(
             );
             continue;
         };
-        // if DEBUG_STATE_MACHINE {
-        //     log!(Level::Info, "intent: {intent:?}");
-        // }
         enemy_state.0 = match intent {
             EnemyIntent::None => {
                 info!("MEOWWW");
@@ -299,7 +282,7 @@ impl Enemy {
 
     #[tracing::instrument()]
     pub fn bundle(enemy_assets: &EnemyAssets, position: Vec2, health: u8) -> impl Bundle {
-        let mut rng = thread_rng();
+        let mut rng = rand::thread_rng();
         let pick = rng.gen_range(0..=EnemyAssets::MAX_ASSETS);
         (
             StateScoped(Screen::Gameplay),
@@ -355,10 +338,10 @@ pub fn handle_dead_enemies(
 }
 
 pub fn get_random_vec2_in_play_area() -> Vec2 {
-    let mut thread_rng = rand::thread_rng();
     const PLAY_AREA_X: f32 = 600.0;
     const PLAY_AREA_Y: f32 = 200.0;
 
+    let mut thread_rng = rand::thread_rng();
     let x_extents = -PLAY_AREA_X..PLAY_AREA_X;
     let y_extents = -PLAY_AREA_Y..PLAY_AREA_Y;
 

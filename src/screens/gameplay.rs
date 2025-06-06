@@ -2,7 +2,7 @@
 
 use crate::{menus::Menu, parrylord::level::spawn_level, screens::Screen, Pause};
 use avian2d::prelude::{Physics, PhysicsTime};
-use bevy::{input::common_conditions::input_just_pressed, prelude::*, ui::Val::*};
+use bevy::{input::common_conditions::input_just_pressed, prelude::*};
 pub fn plugin(app: &mut App) {
     app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
 
@@ -43,8 +43,8 @@ fn spawn_pause_overlay(mut commands: Commands) {
     commands.spawn((
         Name::new("Pause Overlay"),
         Node {
-            width: Percent(100.0),
-            height: Percent(100.0),
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
             ..default()
         },
         GlobalZIndex(1),
