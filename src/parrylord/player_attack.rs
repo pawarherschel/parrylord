@@ -1,18 +1,21 @@
-use crate::parrylord::CollisionLayer;
 use crate::parrylord::assets::{AttackAssets, PlayerAssets};
 use crate::parrylord::attack::Attack;
 use crate::parrylord::enemy_attack::EnemyAttack;
 use crate::parrylord::health::{Health, InvincibilityTimer};
+use crate::parrylord::level::Wall;
 use crate::parrylord::player::Player;
 use crate::parrylord::ttl::Ttl;
+use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
-use crate::{AppSystems, ParrylordSingleton, PausableSystems, exponential_decay};
+use crate::{exponential_decay, AppSystems, ParrylordSingleton, PausableSystems};
 use avian2d::prelude::{
     AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
     Sensor,
 };
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use rand::Rng;
+use std::f32::consts::{FRAC_PI_2, FRAC_PI_6, FRAC_PI_8};
 
 pub fn plugin(app: &mut App) {
     app.register_type::<PlayerAttackIndicator>();
@@ -136,24 +139,32 @@ pub struct PlayerAttack;
 
 impl PlayerAttack {
     pub fn bundle(
-        power: u8,
+        power: u32,
         attack_assets: &AttackAssets,
         pos: Vec2,
         velocity: LinearVelocity,
         ttl: Ttl,
     ) -> impl Bundle {
         (
+            StateScoped(Screen::Gameplay),
             Self,
             Attack(power),
             Transform::from_xyz(pos.x, pos.y, 3.0).with_scale(Vec3::splat(0.1)),
             Sprite {
-                image: PlayerAttack::get_sprite(power % AttackAssets::MAX, attack_assets),
+                image: Self::get_sprite((power % AttackAssets::MAX as u32) as u8, attack_assets),
                 color: Color::srgb(0.1, 0.1, 30.0),
                 ..default()
             },
             Collider::circle(128.0),
-            CollisionLayers::new([CollisionLayer::PlayerProjectile], [CollisionLayer::Enemy]),
-            RigidBody::Kinematic,
+            CollisionLayers::new(
+                [CollisionLayer::PlayerProjectile],
+                [
+                    CollisionLayer::Enemy,
+                    CollisionLayer::EnemyProjectile,
+                    CollisionLayer::Walls,
+                ],
+            ),
+            RigidBody::Dynamic,
             Sensor,
             velocity,
             AngularVelocity(-3.0),
@@ -261,7 +272,7 @@ pub fn handle_parries(
     let velocity = LinearVelocity(angle * sum_speed / total_f32);
     let ttl = Ttl::new((sum_ttl / total_f32) + 1.0);
 
-    let power = 2u8.checked_pow(total - 1).unwrap_or(u8::MAX);
+    let power = 2u32.saturating_pow(total - 1);
 
     commands.spawn(PlayerAttack::bundle(
         power,
@@ -280,12 +291,70 @@ pub fn handle_parries(
 }
 
 pub fn deal_damage(
-    query: Query<(&CollidingEntities, &Attack, Entity), With<PlayerAttack>>,
+    query: Query<
+        (
+            &CollidingEntities,
+            &Attack,
+            Entity,
+            &Transform,
+            &LinearVelocity,
+            &Ttl,
+        ),
+        (With<PlayerAttack>, Without<InvincibilityTimer>),
+    >,
     mut enemies: Query<&mut Health, Without<InvincibilityTimer>>,
+    walls: Query<Entity, With<Wall>>,
     mut commands: Commands,
+    attack_assets: Res<AttackAssets>,
 ) {
-    'outer: for (colliding_entities, attack, attack_entity) in &query {
+    let mut thread_rng = rand::thread_rng();
+
+    'outer: for (n, (colliding_entities, attack, attack_entity, transform, velocity, ttl)) in
+        query.iter().enumerate()
+    {
         for &entity in colliding_entities.iter() {
+            if walls.contains(entity) || enemies.contains(entity) {
+                let Ok(mut attack_entity) = commands.get_entity(attack_entity) else {
+                    continue;
+                };
+                attack_entity.try_despawn();
+
+                let power = attack.0.saturating_sub(1);
+
+                if power != 0 && n < 256 {
+                    let dir = velocity.normalize().to_angle();
+                    let speed = velocity.length();
+                    let ttl = ttl.0.remaining_secs().mul_add(0.5, 1.0);
+
+                    for _ in 0..=power.isqrt() {
+                        let dir = dir
+                            + thread_rng.gen_range((-FRAC_PI_8 / 2.0)..(FRAC_PI_8 / 2.0))
+                            + FRAC_PI_2;
+                        let dir = Vec2::from_angle(dir);
+                        let ttl = Ttl::new(ttl);
+
+                        let new_attack = PlayerAttack::bundle(
+                            power,
+                            &attack_assets,
+                            transform.translation.truncate(),
+                            LinearVelocity(dir * speed),
+                            ttl,
+                        );
+
+                        let id = commands.spawn(new_attack).id();
+
+                        if walls.contains(entity) {
+                            commands
+                                .entity(id)
+                                .insert(InvincibilityTimer(Timer::from_seconds(
+                                    0.1,
+                                    TimerMode::Once,
+                                )));
+                        }
+                    }
+                }
+            }
+
             let Ok(mut health) = enemies.get_mut(entity) else {
                 continue 'outer;
             };
@@ -298,11 +367,6 @@ pub fn deal_damage(
                     0.2,
                     TimerMode::Once,
                 )));
-
-            let Ok(mut attack_entity) = commands.get_entity(attack_entity) else {
-                continue;
-            };
-            attack_entity.try_despawn();
         }
     }
 }

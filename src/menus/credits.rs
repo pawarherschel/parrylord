@@ -1,6 +1,6 @@
 //! The credits menu.
 
-use crate::{asset_tracking::LoadResource, audio::music, menus::Menu, theme::prelude::*};
+use crate::{asset_tracking::LoadResource, menus::Menu, theme::prelude::*};
 use bevy::{ecs::spawn::SpawnIter, input::common_conditions::input_just_pressed, prelude::*};
 
 pub fn plugin(app: &mut App) {
@@ -12,7 +12,7 @@ pub fn plugin(app: &mut App) {
 
     app.register_type::<CreditsAssets>();
     app.load_resource::<CreditsAssets>();
-    app.add_systems(OnEnter(Menu::Credits), start_credits_music);
+    // app.add_systems(OnEnter(Menu::Credits), start_credits_music);
 }
 
 fn spawn_credits_menu(mut commands: Commands) {
@@ -32,20 +32,24 @@ fn spawn_credits_menu(mut commands: Commands) {
 
 fn created_by() -> impl Bundle {
     grid(vec![
-        ["Joe Shmoe", "Implemented alligator wrestling AI"],
-        ["Jane Doe", "Made the music for the alien invasion"],
+        ["Herschel Pawar", "Solo dev"],
+        [
+            "The Bevy Flock",
+            "Project Scaffolding ('bevy_new_2d' Template)",
+        ],
+        ["Jondolf", "Dynamic Character Controller starting point"],
     ])
 }
 
 fn assets() -> impl Bundle {
     grid(vec![
-        ["Ducky sprite", "CC0 by Caz Creates Games"],
+        ["Sprites", "CC0 by kenney.nl"],
         ["Button SFX", "CC0 by Jaszunio15"],
-        ["Music", "CC BY 3.0 by Kevin MacLeod"],
         [
             "Bevy logo",
             "All rights reserved by the Bevy Foundation, permission granted for splash screen use when unmodified",
         ],
+        ["Bad words list", "techpulsetoday"],
     ])
 }
 
@@ -101,10 +105,10 @@ impl FromWorld for CreditsAssets {
     }
 }
 
-fn start_credits_music(mut commands: Commands, credits_music: Res<CreditsAssets>) {
-    commands.spawn((
-        Name::new("Credits Music"),
-        StateScoped(Menu::Credits),
-        music(credits_music.music.clone()),
-    ));
-}
+// fn start_credits_music(mut commands: Commands, credits_music: Res<CreditsAssets>) {
+//     commands.spawn((
+//         Name::new("Credits Music"),
+//         StateScoped(Menu::Credits),
+//         music(credits_music.music.clone()),
+//     ));
+// }

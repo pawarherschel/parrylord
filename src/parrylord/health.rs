@@ -24,7 +24,7 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-pub struct Health(pub u8);
+pub struct Health(pub u32);
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]

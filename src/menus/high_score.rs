@@ -33,8 +33,6 @@ fn spawn_high_score(
 
     let scores = scores.0.clone();
 
-    info!(?scores);
-
     let root = commands.spawn(widget::ui_root("High Score")).id();
 
     let Ok(mut root) = commands.get_entity(root) else {

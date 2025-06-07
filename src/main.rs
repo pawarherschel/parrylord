@@ -15,8 +15,8 @@ mod screens;
 mod theme;
 mod zaphkiel;
 
-use avian2d::PhysicsPlugins;
 use avian2d::prelude::Gravity;
+use avian2d::PhysicsPlugins;
 use bevy::time::common_conditions::on_timer;
 use bevy::window::WindowResolution;
 use bevy::{asset::AssetMetaCheck, prelude::*};
@@ -155,21 +155,25 @@ impl Default for ParrylordSingleton {
 
 impl ParrylordSingleton {
     #[must_use]
-    pub const fn calculate_score(&self) -> u64 {
+    pub const fn calculate_score(&self) -> u128 {
         let &Self {
             enemies_killed,
             level,
             max_parried,
         } = self;
 
-        (level as u64 * enemies_killed as u64).pow(max_parried)
+        let enemies_killed = enemies_killed as u128;
+        let level = level as u128;
+        let max_parried = max_parried;
+
+        (level + enemies_killed).saturating_pow(max_parried)
     }
 }
 
 #[derive(serde::Deserialize, serde::Serialize, Debug, Clone, Default)]
 pub struct HighScore {
     pub name: String,
-    pub score: u64,
+    pub score: u128,
 }
 
 #[derive(serde::Deserialize, Debug, Clone, Default, Resource)]

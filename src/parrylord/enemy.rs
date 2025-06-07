@@ -57,7 +57,7 @@ pub fn handle_spawn_enemy_events(
         commands.spawn(Enemy::bundle(
             &enemy_assets,
             get_random_vec2_in_play_area(),
-            Enemy::BASE_HEALTH.pow(singleton.level - 1),
+            Enemy::BASE_HEALTH.saturating_pow(singleton.level - 1),
         ));
     }
 }
@@ -223,10 +223,7 @@ pub fn handle_enemy_intents(
             continue;
         };
         enemy_state.0 = match intent {
-            EnemyIntent::None => {
-                info!("MEOWWW");
-                EnemyState::Start
-            }
+            EnemyIntent::None => EnemyState::Start,
             EnemyIntent::Idle(_) => EnemyState::Idling,
             EnemyIntent::Move(_, pos) => {
                 let curr = global_transform.translation();
@@ -278,10 +275,10 @@ pub fn tick_enemy_state_timer(mut timers: Query<&mut EnemyStateTimer>, time: Res
 
 impl Enemy {
     const SPEED: f32 = 300.0;
-    const BASE_HEALTH: u8 = 2;
+    const BASE_HEALTH: u32 = 2;
 
     #[tracing::instrument()]
-    pub fn bundle(enemy_assets: &EnemyAssets, position: Vec2, health: u8) -> impl Bundle {
+    pub fn bundle(enemy_assets: &EnemyAssets, position: Vec2, health: u32) -> impl Bundle {
         let mut rng = rand::thread_rng();
         let pick = rng.gen_range(0..=EnemyAssets::MAX_ASSETS);
         (

@@ -6,4 +6,4 @@ pub fn plugin(app: &mut App) {
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
-pub struct Attack(pub u8);
+pub struct Attack(pub u32);

@@ -1,7 +1,7 @@
-use crate::parrylord::CollisionLayer;
 use crate::parrylord::assets::AttackAssets;
 use crate::parrylord::attack::Attack;
 use crate::parrylord::ttl::Ttl;
+use crate::parrylord::CollisionLayer;
 use crate::screens::Screen;
 use avian2d::prelude::{
     AngularVelocity, Collider, CollidingEntities, CollisionLayers, LinearVelocity, RigidBody,
@@ -39,7 +39,7 @@ impl EnemyAttack {
                 [CollisionLayer::EnemyProjectile],
                 [CollisionLayer::PlayerHurt, CollisionLayer::PlayerParry],
             ),
-            RigidBody::Kinematic,
+            RigidBody::Dynamic,
             Sensor,
             velocity,
             AngularVelocity(3.0),
