@@ -17,19 +17,55 @@ use bevy::prelude::*;
 use bevy::sprite::Anchor;
 use rand::prelude::SliceRandom;
 use rand::Rng;
-use std::f32::consts::{FRAC_PI_2, FRAC_PI_6, FRAC_PI_8};
+use std::f32::consts::{FRAC_PI_2, FRAC_PI_8};
 
 pub fn plugin(app: &mut App) {
     app.register_type::<PlayerAttackIndicator>();
+    app.register_type::<FauxPlayerAttackIndicator>();
     app.register_type::<PlayerAttack>();
 
     app.add_systems(
         Update,
-        (aim, get_parry_attempt.pipe(handle_parries), deal_damage)
+        (
+            aim,
+            get_parry_attempt.pipe(handle_parries),
+            deal_damage,
+            update_faux,
+        )
             .run_if(in_state(Screen::Gameplay))
             .in_set(AppSystems::RecordInput)
             .in_set(PausableSystems),
     );
+}
+
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
+#[reflect(Component)]
+pub struct FauxPlayerAttackIndicator;
+
+impl FauxPlayerAttackIndicator {
+    const MAX_SCALE: f32 = 0.75;
+
+    pub fn bundle(player_assets: &PlayerAssets, transform: Transform) -> impl Bundle {
+        (
+            StateScoped(Screen::Gameplay),
+            Self,
+            Sprite {
+                image: player_assets.attack_indicator.clone(),
+                anchor: Anchor::CenterLeft,
+                ..default()
+            },
+            transform,
+            Ttl::new(0.15),
+        )
+    }
+}
+
+fn update_faux(mut query: Query<(&mut Transform, &Ttl), With<FauxPlayerAttackIndicator>>) {
+    for (mut tf, ttl) in &mut query {
+        *tf = tf.with_scale(Vec3::splat(
+            ttl.0.fraction() * FauxPlayerAttackIndicator::MAX_SCALE,
+        ));
+    }
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default, Reflect)]
@@ -42,11 +78,12 @@ impl PlayerAttackIndicator {
             // StateScoped(Screen::Gameplay),
             Name::new("PlayerAttackIndicator"),
             Self,
-            Sprite {
-                image: player_assets.attack_indicator.clone(),
-                anchor: Anchor::CenterLeft,
-                ..default()
-            },
+            // Sprite {
+            //     image: player_assets.attack_indicator.clone(),
+            //     anchor: Anchor::CenterLeft,
+            //     ..default()
+            // },
+            Transform::default(),
             Collider::triangle(
                 Vec2::new(0.0, 0.0),
                 Vec2::new(190.0, -140.0),
@@ -199,22 +236,49 @@ pub fn get_parry_attempt(
     query: Single<&CollidingEntities, (With<PlayerAttackIndicator>, Without<Player>)>,
     all_player_projectiles: Query<Entity, With<PlayerAttack>>,
     mouse_input: Res<ButtonInput<MouseButton>>,
-) -> Option<Vec<Entity>> {
+    mut commands: Commands,
+    player_assets: Res<PlayerAssets>,
+    player_attack_indicator: Single<&GlobalTransform, With<PlayerAttackIndicator>>,
+    window: Single<&Window>,
+    camera: Single<(&Camera, &GlobalTransform)>,
+) -> Vec<Entity> {
     if !mouse_input.just_pressed(MouseButton::Left) {
-        return None;
+        return Vec::new();
     }
 
-    Some(
-        query
-            .iter()
-            .copied()
-            .filter(|e| !all_player_projectiles.contains(*e))
-            .collect(),
-    )
+    let window = *window;
+    let Some(mouse) = window.cursor_position() else {
+        warn!("Some(mouse) = window.cursor_position()");
+        return Vec::new();
+    };
+    let (camera, camera_transform) = *camera;
+
+    let angle = angle_to_mouse_from_global_transform(
+        mouse,
+        *player_attack_indicator,
+        camera,
+        camera_transform,
+    );
+
+    let translation = player_attack_indicator.translation();
+    let rotation = Quat::from_axis_angle(Vec3::Z, angle);
+    let scale = Vec3::splat(FauxPlayerAttackIndicator::MAX_SCALE);
+
+    let transform = Transform::from_translation(translation)
+        .with_rotation(rotation)
+        .with_scale(scale);
+
+    commands.spawn(FauxPlayerAttackIndicator::bundle(&player_assets, transform));
+
+    query
+        .iter()
+        .copied()
+        .filter(|e| !all_player_projectiles.contains(*e))
+        .collect()
 }
 
 pub fn handle_parries(
-    In(entities): In<Option<Vec<Entity>>>,
+    In(entities): In<Vec<Entity>>,
     mut commands: Commands,
     change_components: Query<
         (&LinearVelocity, &Transform, &Ttl),
@@ -226,10 +290,6 @@ pub fn handle_parries(
     camera: Single<(&Camera, &GlobalTransform)>,
     mut singleton: ResMut<ParrylordSingleton>,
 ) {
-    let Some(entities) = entities else {
-        return;
-    };
-
     let Some(&entity) = entities.first() else {
         // warn!("Some(&entity) = entities.get(0)");
         return;
@@ -291,7 +351,6 @@ pub fn handle_parries(
         entity.try_despawn();
     }
 
-    // commands.spawn(sound_effect(interaction_assets.hover.clone()));
     commands.spawn(sound_effect(
         attack_assets
             .parry_sfx
