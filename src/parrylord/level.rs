@@ -1,4 +1,4 @@
-use crate::parrylord::assets::{LevelAssets, PlayerAssets};
+use crate::assets::{LevelAssets, PlayerAssets};
 use crate::parrylord::enemy::{Enemy, SpawnEnemy};
 use crate::parrylord::player::Player;
 use crate::parrylord::CollisionLayer;

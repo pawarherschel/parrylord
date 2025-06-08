@@ -1,7 +1,7 @@
+use crate::assets;
 use avian2d::prelude::PhysicsLayer;
 use bevy::prelude::*;
 
-pub mod assets;
 mod attack;
 pub mod dynamic_character_2d;
 pub mod enemy;

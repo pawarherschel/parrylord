@@ -1,4 +1,5 @@
-use crate::parrylord::assets::{AttackAssets, EnemyAssets};
+use crate::assets::{AttackAssets, EnemyAssets};
+use crate::audio::sound_effect;
 use crate::parrylord::enemy_attack::EnemyAttack;
 use crate::parrylord::health::{DisplayHealth, Health, ZeroHealth};
 use crate::parrylord::player::Player;
@@ -8,6 +9,7 @@ use crate::screens::Screen;
 use crate::{AppSystems, ParrylordSingleton, PausableSystems};
 use avian2d::prelude::{AngularVelocity, Collider, CollisionLayers, LinearVelocity, RigidBody};
 use bevy::prelude::*;
+use rand::prelude::SliceRandom;
 use rand::{random, Rng};
 
 pub fn plugin(app: &mut App) {
@@ -249,6 +251,14 @@ pub fn handle_enemy_intents(
                     Ttl::new(random::<f32>().mul_add(3.0, 0.25)),
                 ));
 
+                commands.spawn(sound_effect(
+                    attack_assets
+                        .attack_sfx
+                        .choose(&mut rand::thread_rng())
+                        .expect("should exist")
+                        .clone(),
+                ));
+
                 if n > 0 {
                     EnemyState::Attacking(n - 1)
                 } else {
@@ -262,7 +272,7 @@ pub fn handle_enemy_intents(
     Ok(())
 }
 
-#[derive(Component, Debug, Clone, PartialEq, Default, Reflect)]
+#[derive(Component, Debug, Clone, PartialEq, Eq, Default, Reflect)]
 #[reflect(Component)]
 pub struct EnemyStateTimer(Timer);
 

@@ -2,10 +2,22 @@
 
 use bevy::prelude::*;
 
-use crate::{asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget};
+use crate::audio::{pause_gameplay_music, resume_not_gameplay_music, spawn_music};
+use crate::{
+    asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget, AudioSpawned,
+};
 
 pub fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Menu::Main), spawn_main_menu);
+    app.add_systems(
+        OnEnter(Menu::Main),
+        (
+            spawn_main_menu,
+            pause_gameplay_music,
+            resume_not_gameplay_music,
+        ),
+    );
+
+    app.add_systems(Update, spawn_music.run_if(|res: Res<AudioSpawned>| !res.0));
 }
 
 fn spawn_main_menu(mut commands: Commands) {

@@ -1,3 +1,5 @@
+use crate::assets::{GameplayMusic, MusicAudio, NotGameplayMusic};
+use crate::AudioSpawned;
 use bevy::prelude::*;
 
 pub fn plugin(app: &mut App) {
@@ -44,4 +46,37 @@ fn apply_global_volume(
     for (playback, mut sink) in &mut audio_query {
         sink.set_volume(global_volume.volume * playback.volume);
     }
+}
+
+pub fn spawn_music(
+    mut commands: Commands,
+    music_audio: Option<Res<MusicAudio>>,
+    mut flag: ResMut<AudioSpawned>,
+) {
+    let Some(music_audio) = music_audio else {
+        return;
+    };
+
+    info!("spawning music");
+
+    flag.0 = true;
+
+    commands.spawn((music(music_audio.gameplay.clone()), GameplayMusic));
+    commands.spawn((music(music_audio.not_gameplay.clone()), NotGameplayMusic));
+}
+
+pub fn pause_gameplay_music(sink: Single<&AudioSink, With<GameplayMusic>>) {
+    sink.pause();
+}
+
+pub fn resume_gameplay_music(sink: Single<&AudioSink, With<GameplayMusic>>) {
+    sink.play();
+}
+
+pub fn pause_not_gameplay_music(sink: Single<&AudioSink, With<NotGameplayMusic>>) {
+    sink.pause();
+}
+
+pub fn resume_not_gameplay_music(sink: Single<&AudioSink, With<NotGameplayMusic>>) {
+    sink.play();
 }

@@ -1,4 +1,5 @@
-use crate::parrylord::assets::{AttackAssets, PlayerAssets};
+use crate::assets::{AttackAssets, PlayerAssets};
+use crate::audio::sound_effect;
 use crate::parrylord::attack::Attack;
 use crate::parrylord::enemy_attack::EnemyAttack;
 use crate::parrylord::health::{Health, InvincibilityTimer};
@@ -14,6 +15,7 @@ use avian2d::prelude::{
 };
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use rand::prelude::SliceRandom;
 use rand::Rng;
 use std::f32::consts::{FRAC_PI_2, FRAC_PI_6, FRAC_PI_8};
 
@@ -288,6 +290,15 @@ pub fn handle_parries(
         };
         entity.try_despawn();
     }
+
+    // commands.spawn(sound_effect(interaction_assets.hover.clone()));
+    commands.spawn(sound_effect(
+        attack_assets
+            .parry_sfx
+            .choose(&mut rand::thread_rng())
+            .expect("should be valid")
+            .clone(),
+    ));
 }
 
 pub fn deal_damage(
@@ -308,6 +319,8 @@ pub fn deal_damage(
     attack_assets: Res<AttackAssets>,
 ) {
     let mut thread_rng = rand::thread_rng();
+
+    let mut spawn_sfx = false;
 
     'outer: for (n, (colliding_entities, attack, attack_entity, transform, velocity, ttl)) in
         query.iter().enumerate()
@@ -351,6 +364,8 @@ pub fn deal_damage(
                                     TimerMode::Once,
                                 )));
                         }
+
+                        spawn_sfx = true;
                     }
                 }
             }
@@ -368,5 +383,15 @@ pub fn deal_damage(
                     TimerMode::Once,
                 )));
         }
+    }
+
+    if spawn_sfx {
+        commands.spawn(sound_effect(
+            attack_assets
+                .attack_sfx
+                .choose(&mut thread_rng)
+                .expect("should exist")
+                .clone(),
+        ));
     }
 }

@@ -1,4 +1,5 @@
-use crate::parrylord::assets::PlayerAssets;
+use crate::assets::PlayerAssets;
+use crate::audio::sound_effect;
 use crate::parrylord::dynamic_character_2d::CharacterControllerBundle;
 use crate::parrylord::health::{DisplayHealth, Health, InvincibilityTimer, ZeroHealth};
 use crate::parrylord::player_attack::PlayerAttackIndicator;
@@ -9,6 +10,7 @@ use avian2d::parry::na::RealField;
 use avian2d::prelude::{Collider, CollidingEntities, CollisionLayers, LinearVelocity, Sensor};
 use bevy::prelude::*;
 use bevy::sprite::Anchor;
+use rand::prelude::SliceRandom;
 use std::fmt::Debug;
 
 pub fn plugin(app: &mut App) {
@@ -83,6 +85,7 @@ impl PlayerSprite {
             walk2,
             stand,
             attack_indicator: _,
+            hurt_sfx: _,
         } = player_assets.clone();
 
         match self {
@@ -224,30 +227,41 @@ impl Player {
 fn hurt(
     collisions_with_hurt_box: Single<&CollidingEntities, With<PlayerHurtBox>>,
     health: Single<(&mut Health, Entity), (With<Player>, Without<InvincibilityTimer>)>,
+    player_assets: Res<PlayerAssets>,
     mut commands: Commands,
 ) {
     let collisions = *collisions_with_hurt_box;
     let (mut health, entity) = health.into_inner();
 
-    if !collisions.is_empty() {
-        // log!(Level::Info, "Health: {health:?}");
-        health.0 -= 1;
-
-        commands
-            .entity(entity)
-            .insert(InvincibilityTimer(Timer::from_seconds(
-                0.3,
-                TimerMode::Once,
-            )));
-
-        for &attack_entity in &collisions.0 {
-            let Ok(mut entity) = commands.get_entity(attack_entity) else {
-                continue;
-            };
-
-            entity.try_despawn();
-        }
+    if collisions.is_empty() {
+        return;
     }
+
+    // log!(Level::Info, "Health: {health:?}");
+    health.0 -= 1;
+
+    commands
+        .entity(entity)
+        .insert(InvincibilityTimer(Timer::from_seconds(
+            0.3,
+            TimerMode::Once,
+        )));
+
+    for &attack_entity in &collisions.0 {
+        let Ok(mut entity) = commands.get_entity(attack_entity) else {
+            continue;
+        };
+
+        entity.try_despawn();
+    }
+
+    commands.spawn(sound_effect(
+        player_assets
+            .hurt_sfx
+            .choose(&mut rand::thread_rng())
+            .expect("should exist")
+            .clone(),
+    ));
 }
 
 #[tracing::instrument(skip_all)]

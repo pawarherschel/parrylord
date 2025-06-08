@@ -7,6 +7,7 @@ extern crate core;
 mod asset_tracking;
 mod audio;
 // mod demo;
+pub mod assets;
 #[cfg(feature = "dev")]
 mod dev_tools;
 mod menus;
@@ -15,6 +16,8 @@ mod screens;
 mod theme;
 mod zaphkiel;
 
+use crate::assets::{GameplayMusic, MusicAudio, NotGameplayMusic};
+use crate::audio::music;
 use avian2d::prelude::Gravity;
 use avian2d::PhysicsPlugins;
 use bevy::time::common_conditions::on_timer;
@@ -95,6 +98,8 @@ impl Plugin for AppPlugin {
             Update,
             get_high_scores.run_if(on_timer(Duration::from_secs_f32(10.0))),
         );
+
+        app.init_resource::<AudioSpawned>();
     }
 }
 
@@ -198,3 +203,6 @@ fn get_high_scores(mut client: BevyReqwest) {
             error!(?e);
         });
 }
+
+#[derive(Resource, Default)]
+pub struct AudioSpawned(pub(crate) bool);

@@ -6,6 +6,7 @@ use crate::zaphkiel::has_bad_word;
 use crate::{HighScore, HighScores, ParrylordSingleton, CF_WORKER_URL};
 use bevy::prelude::*;
 use bevy_mod_reqwest::{BevyReqwest, ReqwestErrorEvent};
+use std::cmp::PartialEq;
 
 pub fn plugin(app: &mut App) {
     app.init_resource::<NameField>();
@@ -79,8 +80,14 @@ fn open_main_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Me
 
 #[derive(Component)]
 struct TextThing;
-#[derive(Resource, Default, Debug)]
+#[derive(Resource, Debug, Eq, PartialEq)]
 struct NameField(String);
+
+impl Default for NameField {
+    fn default() -> Self {
+        Self(String::from("<Start Typing>"))
+    }
+}
 
 fn submit_score(
     _: Trigger<Pointer<Click>>,
@@ -95,6 +102,16 @@ fn submit_score(
     }
 
     let score = singleton.calculate_score();
+
+    if *name_field == NameField::default()
+        || score == 1
+        || name_field
+            .0
+            .as_str()
+            .eq_ignore_ascii_case("BAD WORD DETECTED")
+    {
+        return;
+    }
 
     let reqwest_request = client
         .post(CF_WORKER_URL)
@@ -120,7 +137,19 @@ fn update_name(
     mut name_field: ResMut<NameField>,
     mut text_thing: Single<&mut TextSpan, With<TextThing>>,
 ) {
-    for &key in key.get_just_pressed() {
+    let keys_pressed = key.get_just_pressed().collect::<Vec<_>>();
+
+    if (*name_field == NameField::default()
+        || name_field
+            .0
+            .as_str()
+            .eq_ignore_ascii_case("BAD WORD DETECTED"))
+        && !keys_pressed.is_empty()
+    {
+        name_field.0 = String::new();
+    }
+
+    for &key in keys_pressed {
         if key == KeyCode::Backspace {
             let new_len = name_field.0.len().saturating_sub(1);
             name_field.0.truncate(new_len);
@@ -166,6 +195,10 @@ fn update_name(
                 _ => continue,
             });
         }
+    }
+
+    if name_field.0.is_empty() {
+        *name_field = NameField::default();
     }
 
     (***text_thing).clone_from(&name_field.0);

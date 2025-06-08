@@ -18,7 +18,7 @@ pub fn has_bad_word(s: &str) -> bool {
     let s = &*s_;
     BAD_WORDS
         .iter()
-        .any(|x| s.split_whitespace().any(|it| x.contains(it)))
+        .any(|x| s.split_whitespace().any(|it| x.eq_ignore_ascii_case(it)))
 }
 
 // taken from https://gist.github.com/techpulsetoday/8492ebf547a890af8289d0939ffbda0a

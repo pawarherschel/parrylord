@@ -13,6 +13,10 @@ pub fn plugin(app: &mut App) {
 
     app.register_type::<AttackAssets>();
     app.load_resource::<AttackAssets>();
+
+    app.register_type::<GameplayMusic>();
+    app.register_type::<NotGameplayMusic>();
+    app.load_resource::<MusicAudio>();
 }
 
 #[derive(Resource, Asset, Clone, Reflect, Debug)]
@@ -60,6 +64,9 @@ pub struct PlayerAssets {
     pub stand: Handle<Image>,
     #[dependency]
     pub attack_indicator: Handle<Image>,
+
+    #[dependency]
+    pub hurt_sfx: Vec<Handle<AudioSource>>,
 }
 
 impl FromWorld for PlayerAssets {
@@ -72,6 +79,14 @@ impl FromWorld for PlayerAssets {
             walk2: assets.load("images/pink/walk2.png"),
             stand: assets.load("images/pink/stand.png"),
             attack_indicator: assets.load("images/pink/attack_indicator.png"),
+
+            hurt_sfx: vec![
+                assets.load("audio/sound_effects/player_hurt_0.ogg"),
+                assets.load("audio/sound_effects/player_hurt_1.ogg"),
+                assets.load("audio/sound_effects/player_hurt_2.ogg"),
+                assets.load("audio/sound_effects/player_hurt_3.ogg"),
+                assets.load("audio/sound_effects/player_hurt_4.ogg"),
+            ],
         }
     }
 }
@@ -103,6 +118,10 @@ pub struct AttackAssets {
     pub _10: Handle<Image>,
     #[dependency]
     pub _11: Handle<Image>,
+    #[dependency]
+    pub parry_sfx: Vec<Handle<AudioSource>>,
+    #[dependency]
+    pub attack_sfx: Vec<Handle<AudioSource>>,
 }
 
 impl AttackAssets {
@@ -126,6 +145,20 @@ impl FromWorld for AttackAssets {
             _9: assets.load("images/attack/9.png"),
             _10: assets.load("images/attack/10.png"),
             _11: assets.load("images/attack/11.png"),
+            parry_sfx: vec![
+                assets.load("audio/sound_effects/parry_0.ogg"),
+                assets.load("audio/sound_effects/parry_1.ogg"),
+                assets.load("audio/sound_effects/parry_2.ogg"),
+                assets.load("audio/sound_effects/parry_3.ogg"),
+                assets.load("audio/sound_effects/parry_4.ogg"),
+            ],
+            attack_sfx: vec![
+                assets.load("audio/sound_effects/attack_0.ogg"),
+                assets.load("audio/sound_effects/attack_1.ogg"),
+                assets.load("audio/sound_effects/attack_2.ogg"),
+                assets.load("audio/sound_effects/attack_3.ogg"),
+                assets.load("audio/sound_effects/attack_4.ogg"),
+            ],
         }
     }
 }
@@ -146,21 +179,27 @@ impl FromWorld for LevelAssets {
     }
 }
 
-// #[derive(Resource, Asset, Clone, Debug, Reflect)]
-// #[reflect(Resource)]
-// pub struct Shaders {
-//     tint_shader: TintMaterial,
-// }
-//
-// #[derive(AsBindGroup, Debug, Clone, Asset, Reflect)]
-// pub struct TintMaterial {
-//     #[texture(0)]
-//     #[sampler(1)]
-//     color_texture: Handle<Image>,
-// }
-//
-// impl Material2d for TintMaterial {
-//     fn fragment_shader() -> ShaderRef {
-//         "shaders/tint_material.wgsl".into()
-//     }
-// }
+#[derive(Resource, Asset, Clone, Reflect, Debug)]
+#[reflect(Resource)]
+pub struct MusicAudio {
+    pub gameplay: Handle<AudioSource>,
+    pub not_gameplay: Handle<AudioSource>,
+}
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct GameplayMusic;
+
+#[derive(Component, Reflect, Default)]
+#[reflect(Component)]
+pub struct NotGameplayMusic;
+
+impl FromWorld for MusicAudio {
+    fn from_world(world: &mut World) -> Self {
+        let assets = world.resource::<AssetServer>();
+        Self {
+            gameplay: assets.load("audio/music/we_wont_be_held_down.ogg"),
+            not_gameplay: assets.load("audio/music/salt.ogg"),
+        }
+    }
+}

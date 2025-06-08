@@ -1,10 +1,15 @@
 //! The screen state for the main gameplay.
 
+use crate::audio::{pause_not_gameplay_music, resume_gameplay_music};
 use crate::{menus::Menu, parrylord::level::spawn_level, screens::Screen, Pause};
 use avian2d::prelude::{Physics, PhysicsTime};
 use bevy::{input::common_conditions::input_just_pressed, prelude::*};
+
 pub fn plugin(app: &mut App) {
-    app.add_systems(OnEnter(Screen::Gameplay), spawn_level);
+    app.add_systems(
+        OnEnter(Screen::Gameplay),
+        (spawn_level, pause_not_gameplay_music, resume_gameplay_music),
+    );
 
     // Toggle pause on key press.
     app.add_systems(
@@ -22,7 +27,15 @@ pub fn plugin(app: &mut App) {
             ),
         ),
     );
-    app.add_systems(OnExit(Screen::Gameplay), (close_menu, unpause));
+    app.add_systems(
+        OnExit(Screen::Gameplay),
+        (
+            close_menu,
+            unpause,
+            // pause_gameplay_music,
+            // resume_not_gameplay_music,
+        ),
+    );
     app.add_systems(
         OnEnter(Menu::None),
         unpause.run_if(in_state(Screen::Gameplay)),
