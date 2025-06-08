@@ -30,9 +30,11 @@ pub fn plugin(app: &mut App) {
 const INSTRUCTIONS: &str = "
 WASD to move, left click to parry.
 
-On the high score screen you can type your name.
+On the high score screen you can type your name, but to prevent accidental clicks, the buttons are inactive for 1 second.
 
-The score scales exponentially with the max parries, so even though you can spam the parry, it's better to parry a lot of attacks at once. the player's damage also increases according to the number of attacks you parry.
+The score scales exponentially with the max parries, so even though you can spam the parry, it's better to parry a lot of attacks at once. The player's damage also increases according to the number of attacks you parry.
+
+The game needs to be played in full screen as the canvas size is 1920×1080 (sorry).
 ";
 
 fn spawn_main_menu(mut commands: Commands) {
