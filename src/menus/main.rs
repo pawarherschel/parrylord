@@ -2,7 +2,9 @@
 
 use bevy::prelude::*;
 
-use crate::audio::{pause_gameplay_music, resume_not_gameplay_music, spawn_music};
+use crate::audio::{
+    pause_gameplay_music, pause_not_gameplay_music, resume_not_gameplay_music, spawn_music,
+};
 use crate::{
     asset_tracking::ResourceHandles, menus::Menu, screens::Screen, theme::widget, AudioSpawned,
 };
@@ -17,33 +19,88 @@ pub fn plugin(app: &mut App) {
         ),
     );
 
-    app.add_systems(Update, spawn_music.run_if(|res: Res<AudioSpawned>| !res.0));
+    app.add_systems(
+        Update,
+        (spawn_music, pause_gameplay_music, pause_not_gameplay_music)
+            .chain()
+            .run_if(|res: Res<AudioSpawned>| !res.0),
+    );
 }
+
+const INSTRUCTIONS: &str = "
+WASD to move, left click to parry.
+
+On the high score screen you can type your name.
+
+The score scales exponentially with the max parries, so even though you can spam the parry, it's better to parry a lot of attacks at once. the player's damage also increases according to the number of attacks you parry.
+";
 
 fn spawn_main_menu(mut commands: Commands) {
     commands.spawn((
-        widget::ui_root("Main Menu"),
+        Name::new("Main Menu"),
         GlobalZIndex(2),
         StateScoped(Menu::Main),
-        #[cfg(not(target_family = "wasm"))]
+        Node {
+            display: Display::Grid,
+            position_type: PositionType::Absolute,
+            width: Val::Percent(100.0),
+            height: Val::Percent(100.0),
+            align_items: AlignItems::Center,
+            justify_content: JustifyContent::Center,
+            flex_direction: FlexDirection::Column,
+            row_gap: Val::Px(20.0),
+            grid_template_columns: vec![RepeatedGridTrack::percent(2, 50.0)],
+            ..default()
+        },
+        Pickable::IGNORE,
         children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
-            widget::button("HighScores", open_high_score_menu),
-            widget::button("Exit", exit_app),
-        ],
-        #[cfg(target_family = "wasm")]
-        children![
-            widget::button("Play", enter_loading_or_gameplay_screen),
-            widget::button("Settings", open_settings_menu),
-            widget::button("Credits", open_credits_menu),
-            widget::button("HighScores", open_high_score_menu),
+            (
+                Node {
+                    width: Val::Auto,
+                    height: Val::Auto,
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    row_gap: Val::Px(20.0),
+                    grid_column: GridPlacement::start(1),
+                    ..default()
+                },
+                Text::new(INSTRUCTIONS),
+            ),
+            (
+                Node {
+                    position_type: PositionType::Absolute,
+                    width: Val::Percent(100.0),
+                    height: Val::Percent(100.0),
+                    align_items: AlignItems::Center,
+                    justify_content: JustifyContent::Center,
+                    flex_direction: FlexDirection::Column,
+                    row_gap: Val::Px(20.0),
+                    grid_column: GridPlacement::start(2),
+                    ..default()
+                },
+                // Don't block picking events for other UI roots.
+                Pickable::IGNORE,
+                #[cfg(not(target_family = "wasm"))]
+                children![
+                    widget::button("Play", enter_loading_or_gameplay_screen),
+                    widget::button("Settings", open_settings_menu),
+                    widget::button("Credits", open_credits_menu),
+                    widget::button("HighScores", open_high_score_menu),
+                    widget::button("Exit", exit_app),
+                ],
+                #[cfg(target_family = "wasm")]
+                children![
+                    widget::button("Play", enter_loading_or_gameplay_screen),
+                    widget::button("Settings", open_settings_menu),
+                    widget::button("Credits", open_credits_menu),
+                    widget::button("HighScores", open_high_score_menu),
+                ],
+            )
         ],
     ));
 }
 
-pub fn enter_loading_or_gameplay_screen(
+fn enter_loading_or_gameplay_screen(
     _: Trigger<Pointer<Click>>,
     resource_handles: Res<ResourceHandles>,
     mut next_screen: ResMut<NextState<Screen>>,

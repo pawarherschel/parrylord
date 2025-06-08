@@ -1,5 +1,6 @@
-use crate::menus::main::enter_loading_or_gameplay_screen;
+use crate::asset_tracking::ResourceHandles;
 use crate::menus::Menu;
+use crate::screens::Screen;
 use crate::theme::palette::LABEL_TEXT;
 use crate::theme::widget;
 use crate::zaphkiel::has_bad_word;
@@ -17,7 +18,10 @@ pub fn plugin(app: &mut App) {
     //         .run_if(resource_changed::<NameField>)
     //         .run_if(in_state(Menu::HighScore)),
     // );
-    app.add_systems(Update, update_name.run_if(in_state(Menu::HighScore)));
+    app.add_systems(
+        Update,
+        (update_name, tick_inactive_timer).run_if(in_state(Menu::HighScore)),
+    );
 }
 
 fn spawn_high_score(
@@ -72,14 +76,42 @@ fn spawn_high_score(
 
         children_spawner.spawn(widget::button("Main Menu", open_main_menu));
     });
+
+    commands.insert_resource(Inactive(Timer::from_seconds(1.0, TimerMode::Once)));
 }
 
-fn open_main_menu(_: Trigger<Pointer<Click>>, mut next_menu: ResMut<NextState<Menu>>) {
+fn enter_loading_or_gameplay_screen(
+    _: Trigger<Pointer<Click>>,
+    resource_handles: Res<ResourceHandles>,
+    mut next_screen: ResMut<NextState<Screen>>,
+    inactive: Option<Res<Inactive>>,
+) {
+    if inactive.is_some() {
+        return;
+    }
+
+    if resource_handles.is_all_done() {
+        next_screen.set(Screen::Gameplay);
+    } else {
+        next_screen.set(Screen::Loading);
+    }
+}
+
+fn open_main_menu(
+    _: Trigger<Pointer<Click>>,
+    mut next_menu: ResMut<NextState<Menu>>,
+    inactive: Option<Res<Inactive>>,
+) {
+    if inactive.is_some() {
+        return;
+    }
+
     next_menu.set(Menu::Main);
 }
 
 #[derive(Component)]
 struct TextThing;
+
 #[derive(Resource, Debug, Eq, PartialEq)]
 struct NameField(String);
 
@@ -89,13 +121,36 @@ impl Default for NameField {
     }
 }
 
+#[derive(Resource)]
+struct Inactive(Timer);
+
+fn tick_inactive_timer(
+    mut timer: Option<ResMut<Inactive>>,
+    time: Res<Time>,
+    mut commands: Commands,
+) {
+    let Some(mut timer) = timer else {
+        return;
+    };
+
+    timer.0.tick(time.delta());
+    if timer.0.just_finished() {
+        commands.remove_resource::<Inactive>();
+    }
+}
+
 fn submit_score(
     _: Trigger<Pointer<Click>>,
     singleton: Res<ParrylordSingleton>,
     mut name_field: ResMut<NameField>,
     mut next_menu: ResMut<NextState<Menu>>,
     mut client: BevyReqwest,
+    inactive: Option<Res<Inactive>>,
 ) {
+    if inactive.is_some() {
+        return;
+    }
+
     if has_bad_word(&name_field.0) {
         name_field.0 = String::from("BAD WORD DETECTED");
         return;
@@ -136,7 +191,12 @@ fn update_name(
     key: Res<ButtonInput<KeyCode>>,
     mut name_field: ResMut<NameField>,
     mut text_thing: Single<&mut TextSpan, With<TextThing>>,
+    inactive: Option<Res<Inactive>>,
 ) {
+    if inactive.is_some() {
+        return;
+    }
+
     let keys_pressed = key.get_just_pressed().collect::<Vec<_>>();
 
     if (*name_field == NameField::default()
